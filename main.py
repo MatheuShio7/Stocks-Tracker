@@ -11,13 +11,13 @@ class Functions():
         self.amount_entry.delete(0, END)
         self.comments_entry.delete(0, END)
     
-    #função para se conectar ao banco de dado
+    #função para se conectar ao banco de dados
     '''
     def bd_connect(self): 
         self.connect = sqlite3.connect('stocks.bd')
         self.cursor = self.connect.cursor()
     
-    #função para se desconectar do banco de dado
+    #função para se desconectar do banco de dados
     def bd_disconnect(self): 
         self.connect.close()
 
