@@ -17,7 +17,7 @@ class Functions():
         self.connect = sqlite3.connect('stocks.bd')
         self.cursor = self.connect.cursor()
     
-    #função para se desconectar dos bancos de dados
+    #função para se desconectar do banco de dado
     def bd_disconnect(self): 
         self.connect.close()
 
