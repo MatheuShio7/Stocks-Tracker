@@ -7,13 +7,19 @@ window = Tk()
 
 class Functions():
     #função para limpar os campos
-    def clean_entries(self): 
+    def clean_stocks_entries(self): 
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
         self.comments_entry.delete(0, END)
+
+    def clean_earnings_history_entries(self):
+        self.date_entry.config(state="normal")
+        self.date_entry.delete(0, END)
+        self.date_entry.insert(0, "yyyy/mm/dd")
+        self.date_entry.config(font=('garamond', 13), fg='grey')
+        self.value_entry.delete(0, END)
     
     #função para se conectar ao banco de dados
-    '''
     def bd_connect(self): 
         self.connect = sqlite3.connect('stocks_tracker.bd')
         self.cursor = self.connect.cursor()
@@ -23,15 +29,24 @@ class Functions():
         self.connect.close()
 
     #função para criar as tabelas
-    def create_table(self):
+    def create_tables(self):
         self.bd_connect()
         self.cursor.execute("""
             create table if not exists ticker_amount (
-                            ticker not null varchar(6),
-                            aumont int,
-                            primary key (ticker)
-            ) default charset utf8mb4;""")
-    '''
+                ticker text not null,
+                amount int not null,
+                comments text,
+                primary key (ticker)
+            );""")
+        self.cursor.execute("""
+            create table if not exists earning_history (
+                ticker text no null,
+                date date not null,
+                value float not null,
+                foreign key (ticker) references ticker_amount (ticker)  
+            );""")
+        self.connect.commit()
+        self.bd_disconnect()
 
 
 class Aplication(Functions):
@@ -45,6 +60,7 @@ class Aplication(Functions):
         self.ticker_aumont_table()
         self.comments_table()
         self.earning_history_table()
+        self.create_tables()
         window.mainloop()
     
     def screen_settings(self):
@@ -67,11 +83,12 @@ class Aplication(Functions):
         self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
 
     def buttons(self):
+        #botões do cadastro das ações
         self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.new_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
 
         self.clean_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
-                                   font=('garamond', 11, 'bold'), command=self.clean_entries)
+                                   font=('garamond', 11, 'bold'), command=self.clean_stocks_entries)
         self.clean_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
 
         self.delete_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
@@ -79,6 +96,20 @@ class Aplication(Functions):
 
         self.update_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
+
+        #botões do cadastro do histórico de proventos
+        self.new_earning_history_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.new_earning_history_button.place(relx=0.76,rely=0.79,relwidth=0.05,relheight=0.03)
+
+        self.clean_earning_history_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
+                                   font=('garamond', 11, 'bold'), command=self.clean_earnings_history_entries)
+        self.clean_earning_history_button.place(relx=0.82,rely=0.79,relwidth=0.05,relheight=0.03)
+
+        self.delete_earning_history_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.delete_earning_history_button.place(relx=0.88,rely=0.79,relwidth=0.05,relheight=0.03)
+
+        self.update_earning_history_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
 
     def texts(self):
         self.ticker_text = Label(self.window, text='Ticker', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
@@ -170,13 +201,15 @@ class Aplication(Functions):
         self.scrool_comments_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
 
     def earning_history_table(self):
-        self.earning_history_table = ttk.Treeview(self.frame_earning_history, height=3, columns=('column1', 'column2'))
+        self.earning_history_table = ttk.Treeview(self.frame_earning_history, height=3, columns=('column1', 'column2', 'column3'))
         self.earning_history_table.configure(height=5, show='headings')
-        self.earning_history_table.heading('#1', text='Data')
-        self.earning_history_table.heading('#2', text='Valor')
+        self.earning_history_table.heading('#1', text='Ticker')
+        self.earning_history_table.heading('#2', text='Data')
+        self.earning_history_table.heading('#3', text='Valor')
 
         self.earning_history_table.column('#1', width=10)
         self.earning_history_table.column('#2', width=10)
+        self.earning_history_table.column('#3', width=10)
 
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("garamond", 12, "bold"))
