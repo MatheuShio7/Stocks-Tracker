@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+from tkcalendar import * 
 import sqlite3
 
 window = Tk()
@@ -14,7 +15,7 @@ class Functions():
     #função para se conectar ao banco de dados
     '''
     def bd_connect(self): 
-        self.connect = sqlite3.connect('stocks.bd')
+        self.connect = sqlite3.connect('stocks_tracker.bd')
         self.cursor = self.connect.cursor()
     
     #função para se desconectar do banco de dados
@@ -25,7 +26,7 @@ class Functions():
     def create_table(self):
         self.bd_connect()
         self.cursor.execute("""
-            create table if not exists tracker_amount (
+            create table if not exists ticker_amount (
                             ticker not null varchar(6),
                             aumont int,
                             primary key (ticker)
@@ -42,12 +43,14 @@ class Aplication(Functions):
         self.texts()
         self.entries()
         self.ticker_aumont_table()
+        self.comments_table()
+        self.earning_history_table()
         window.mainloop()
     
     def screen_settings(self):
         self.window.title('Stocks Tracker') 
         self.window.configure(background= '#880808') #cor de fundo
-        self.window.geometry('1080x700') #dimensões da tela 
+        self.window.geometry('1920x1080') #dimensões da tela 
         self.window.resizable(True, True) #possibilidade de redimensionar a tela
 
     def frames(self):
@@ -61,31 +64,40 @@ class Aplication(Functions):
         self.frame_graphic.place(relx=0.527, rely=0.05, relwidth=0.45, relheight=0.5)
 
         self.frame_earning_history = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.frame_earning_history.place(relx=0.65,rely=0.6,relwidth=0.2,relheight=0.35)
+        self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
 
     def buttons(self):
-        self.new_button = Button(self.window, text='Add', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.new_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.clean_button = Button(self.window, text='Clean', bg='#800020', fg='white', bd=3, 
+        self.clean_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
                                    font=('garamond', 11, 'bold'), command=self.clean_entries)
         self.clean_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.delete_button = Button(self.window, text='Delete', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.delete_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.delete_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.update_button = Button(self.window, text='Update', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.update_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
 
     def texts(self):
         self.ticker_text = Label(self.window, text='Ticker', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
         self.ticker_text.place(relx=0.008,rely=0.255, relwidth=0.05, relheight=0.025)
 
-        self.amount_text = Label(self.window, text='Amount', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.amount_text.place(relx=0.012,rely=0.32, relwidth=0.05, relheight=0.025)
+        self.amount_text = Label(self.window, text='Quantidade', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
+        self.amount_text.place(relx=0.018,rely=0.32, relwidth=0.05, relheight=0.025)
 
-        self.comments_text = Label(self.window, text='Comments', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.comments_text.place(relx=0.017,rely=0.385, relwidth=0.05, relheight=0.025)
+        self.comments_text = Label(self.window, text='Descrição', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
+        self.comments_text.place(relx=0.016,rely=0.385, relwidth=0.05, relheight=0.025)
+
+        self.date_text = Label(self.window, text='Data', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
+        self.date_text.place(relx=0.76,rely=0.65, relwidth=0.05, relheight=0.025)
+
+        self.value_text = Label(self.window, text='Valor', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
+        self.value_text.place(relx=0.762,rely=0.715, relwidth=0.05, relheight=0.025)
+
+        self.rs_text = Label(self.window, text='R$', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
+        self.rs_text.place(relx=0.76, rely=0.74, relwidth=0.05, relheight=0.025)
 
     def entries(self):
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
@@ -97,11 +109,39 @@ class Aplication(Functions):
         self.comments_entry = Entry(self.window, font=('garamond', 13))
         self.comments_entry.place(relx=0.02,rely=0.41,relwidth=0.26,relheight=0.025)
 
+        self.date_entry = Entry(self.window, font=('garamond', 13), fg='grey')
+        self.date_entry.place(relx=0.77555,rely=0.675,relwidth=0.05,relheight=0.025)
+        self.date_entry.insert(0, "yyyy/mm/dd")
+        self.date_entry.bind('<1>', self.pick_date)
+
+        self.value_entry = Entry(self.window, font=('garamond', 13))
+        self.value_entry.place(relx=0.792,rely=0.74,relwidth=0.05,relheight=0.025)
+
+    def pick_date(self, event):
+        self.date_window = Toplevel()
+        self.date_window.grab_set()
+        self.date_window.title('Choose The Date')
+        self.date_window.geometry('250x220+590+370')
+        self.calendar = Calendar(self.date_window, selectmode='day', date_pattern='y/mm/dd')
+        self.calendar.place(x=0, y=0)
+        
+        self.submit_btn = Button(self.date_window, text='Selecionar', command=self.update_date)
+        self.submit_btn.place(x=94, y=190)
+        self.date_entry.config(fg='black')
+
+    def update_date(self):
+        selected_date = self.calendar.get_date()
+        self.date_entry.config(state="normal")
+        self.date_entry.delete(0, END)
+        self.date_entry.insert(0, selected_date)
+        self.date_entry.config(state="readonly")
+        self.date_window.destroy()
+        
     def ticker_aumont_table(self):
         self.ticker_amount_table = ttk.Treeview(self.frame_tabela_ticker_amount, height= 3, columns=('column1', 'column2'))
         self.ticker_amount_table.configure(height=5, show='headings')
         self.ticker_amount_table.heading('#1', text='Ticker')
-        self.ticker_amount_table.heading('#2', text='Aumont')
+        self.ticker_amount_table.heading('#2', text='Quantidade')
 
         self.ticker_amount_table.column('#1', width=10)
         self.ticker_amount_table.column('#2', width=10)
@@ -114,5 +154,36 @@ class Aplication(Functions):
         self.ticker_amount_table.configure(yscroll=self.scrool_ticker_amount_table.set)
         self.scrool_ticker_amount_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
 
-        
+    def comments_table(self):
+        self.comments_table = ttk.Treeview(self.frame_comments, height=3, columns=('column1'))
+        self.comments_table.configure(height=5, show='headings')
+        self.comments_table.heading('#1', text='Descrição')
+
+        self.comments_table.column('#1', width=10)
+
+        style = ttk.Style()
+        style.configure("Treeview.Heading", font=("garamond", 12, "bold"))
+        self.comments_table.place(relx=0, rely=0, relwidth=0.95, relheight=1)
+
+        self.scrool_comments_table = Scrollbar(self.frame_comments, orient='vertical')
+        self.comments_table.configure(yscroll=self.scrool_comments_table.set)
+        self.scrool_comments_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
+
+    def earning_history_table(self):
+        self.earning_history_table = ttk.Treeview(self.frame_earning_history, height=3, columns=('column1', 'column2'))
+        self.earning_history_table.configure(height=5, show='headings')
+        self.earning_history_table.heading('#1', text='Data')
+        self.earning_history_table.heading('#2', text='Valor')
+
+        self.earning_history_table.column('#1', width=10)
+        self.earning_history_table.column('#2', width=10)
+
+        style = ttk.Style()
+        style.configure("Treeview.Heading", font=("garamond", 12, "bold"))
+        self.earning_history_table.place(relx=0,rely=0,relwidth=0.95,relheight=1)
+
+        self.scrool_earning_history_table = Scrollbar(self.frame_earning_history, orient='vertical')
+        self.earning_history_table.configure(yscroll=self.scrool_earning_history_table.set)
+        self.scrool_earning_history_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
+
 Aplication()
