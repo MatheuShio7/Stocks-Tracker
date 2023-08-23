@@ -35,9 +35,16 @@ class Functions():
             create table if not exists ticker_amount (
                 ticker text not null,
                 amount int not null,
-                comments text,
                 primary key (ticker)
             );""")
+        
+        self.cursor.execute("""
+            create table if not exists comments (
+                ticker text not null,
+                comments text,
+                foreign key (ticker) references ticker_amount (ticker)
+            );""")
+
         self.cursor.execute("""
             create table if not exists earning_history (
                 ticker text no null,
@@ -45,10 +52,69 @@ class Functions():
                 value float not null,
                 foreign key (ticker) references ticker_amount (ticker)  
             );""")
+        
+        self.connect.commit()  
+        self.bd_disconnect()
+
+    def register_stock(self):
+        self.ticker = self.ticker_entry.get().upper()
+        self.amount = self.amount_entry.get()
+
+        self.bd_connect()
+        self.cursor.execute("""insert into ticker_amount (ticker, amount)
+            values (?, ?)""", (self.ticker, self.amount))
+        
+        self.connect.commit()
+        self.bd_disconnect()
+        self.show_table1()
+        self.clean_stocks_entries()
+
+    def show_table1(self):
+        self.ticker_amount_table.delete(*self.ticker_amount_table.get_children())
+        self.bd_connect()
+        table1 = self.cursor.execute(""" select ticker, amount from ticker_amount; """)
+        for i in table1:
+            self.ticker_amount_table.insert('', END, values=i)
+        self.bd_disconnect()
+
+    def register_comments(self):
+        self.ticker = self.ticker_entry.get().upper()
+        self.comments = self.comments_entry.get().capitalize()
+
+        self.bd_connect()
+        self.cursor.execute(""" insert into comments (ticker, comments)
+            values (?, ?)""", (self.ticker, self.comments))
+        
         self.connect.commit()
         self.bd_disconnect()
 
+    def combined_function(self):
+        self.register_stock()
+        self.register_comments()
 
+    def on_double_click(self, event):
+        self.clean_stocks_entries()
+        self.ticker_amount_table.selection()
+
+        for n in self.ticker_amount_table.selection():
+            col1, col2 = self.ticker_amount_table.item(n, 'values')
+            self.ticker_entry.insert(END, col1)
+            self.amount_entry.insert(END, col2)
+    
+    def delete_stock(self):
+        self.ticker = self.ticker_entry.get().upper()
+        self.amount = self.amount_entry.get()
+        self.comments = self.comments_entry.get()
+
+        self.bd_connect()
+        self.cursor.execute(""" delete from comments where ticker = ?""", (self.ticker,))
+        self.cursor.execute(""" delete from ticker_amount where ticker = ?""", (self.ticker,))
+        self.connect.commit()
+
+        self.bd_disconnect()
+        self.clean_stocks_entries()
+        self.show_table1()
+        
 class Aplication(Functions):
     def __init__(self):
         self.window = window
@@ -61,6 +127,7 @@ class Aplication(Functions):
         self.comments_table()
         self.earning_history_table()
         self.create_tables()
+        self.show_table1()
         window.mainloop()
     
     def screen_settings(self):
@@ -84,14 +151,13 @@ class Aplication(Functions):
 
     def buttons(self):
         #botões do cadastro das ações
-        self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.combined_function)
         self.new_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.clean_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
-                                   font=('garamond', 11, 'bold'), command=self.clean_stocks_entries)
+        self.clean_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.clean_stocks_entries)
         self.clean_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.delete_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.delete_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.delete_stock)
         self.delete_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
 
         self.update_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
@@ -130,9 +196,14 @@ class Aplication(Functions):
         self.rs_text = Label(self.window, text='R$', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
         self.rs_text.place(relx=0.76, rely=0.74, relwidth=0.05, relheight=0.025)
 
+        self.earning_history_text = Label(self.window, text='Histórico de Proventos', bg='#880808',fg='white', font=('garamond', 17, 'bold'))
+        self.earning_history_text.place(relx=0.76,rely=0.61, relwidth=0.15, relheight=0.025)
+
     def entries(self):
+        
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
         self.ticker_entry.place(relx=0.02,rely=0.28,relwidth=0.05,relheight=0.025)
+
 
         self.amount_entry = Spinbox(self.window, from_=0, to=100000000000000, font=('garamond', 13))
         self.amount_entry.place(relx=0.02,rely=0.345,relwidth=0.05,relheight=0.025)
@@ -184,6 +255,8 @@ class Aplication(Functions):
         self.scrool_ticker_amount_table = Scrollbar(self.frame_tabela_ticker_amount, orient='vertical')
         self.ticker_amount_table.configure(yscroll=self.scrool_ticker_amount_table.set)
         self.scrool_ticker_amount_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
+
+        self.ticker_amount_table.bind('<Double-1>', self.on_double_click)
 
     def comments_table(self):
         self.comments_table = ttk.Treeview(self.frame_comments, height=3, columns=('column1'))
