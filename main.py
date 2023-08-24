@@ -10,7 +10,8 @@ class Functions():
     def clean_stocks_entries(self): 
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
-        self.comments_entry.delete(0, END)
+        self.amount_entry.insert(END, 0)
+        self.comment_entry.delete(0, END)
 
     def clean_earnings_history_entries(self):
         self.date_entry.config(state="normal")
@@ -21,7 +22,7 @@ class Functions():
     
     #função para se conectar ao banco de dados
     def bd_connect(self): 
-        self.connect = sqlite3.connect('stocks_tracker.bd')
+        self.connect = sqlite3.connect('stocks_tracker.db')
         self.cursor = self.connect.cursor()
     
     #função para se desconectar do banco de dados
@@ -41,7 +42,7 @@ class Functions():
         self.cursor.execute("""
             create table if not exists comments (
                 ticker text not null,
-                comments text,
+                comment text,
                 foreign key (ticker) references ticker_amount (ticker)
             );""")
 
@@ -67,7 +68,6 @@ class Functions():
         self.connect.commit()
         self.bd_disconnect()
         self.show_table1()
-        self.clean_stocks_entries()
 
     def show_table1(self):
         self.ticker_amount_table.delete(*self.ticker_amount_table.get_children())
@@ -77,13 +77,22 @@ class Functions():
             self.ticker_amount_table.insert('', END, values=i)
         self.bd_disconnect()
 
+    def show_comments_table(self):
+        self.ticker = self.ticker_entry.get()
+        self.comments_table.delete(*self.comments_table.get_children())
+        self.bd_connect()
+        table2 = self.cursor.execute(""" select comment from comments where ticker = ?""", (self.ticker,))
+        for c in table2:
+            self.comments_table.insert('', END, values=c)
+        self.bd_disconnect()
+
     def register_comments(self):
         self.ticker = self.ticker_entry.get().upper()
-        self.comments = self.comments_entry.get().capitalize()
+        self.comment = self.comment_entry.get()
 
         self.bd_connect()
-        self.cursor.execute(""" insert into comments (ticker, comments)
-            values (?, ?)""", (self.ticker, self.comments))
+        self.cursor.execute(""" insert into comments (ticker, comment)
+            values (?, ?)""", (self.ticker, self.comment))
         
         self.connect.commit()
         self.bd_disconnect()
@@ -91,20 +100,24 @@ class Functions():
     def combined_function(self):
         self.register_stock()
         self.register_comments()
+        self.clean_stocks_entries()
 
     def on_double_click(self, event):
         self.clean_stocks_entries()
-        self.ticker_amount_table.selection()
+        self.amount_entry.delete(0, END)
+        selected_stock = self.ticker_amount_table.selection()
 
-        for n in self.ticker_amount_table.selection():
-            col1, col2 = self.ticker_amount_table.item(n, 'values')
+        if selected_stock:  
+            col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.ticker_entry.insert(END, col1)
             self.amount_entry.insert(END, col2)
-    
+            self.frame_comments.place(relx=0.3, rely=0.6, relwidth=0.2, relheight=0.35)
+            self.show_comments_table()  
+
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
         self.amount = self.amount_entry.get()
-        self.comments = self.comments_entry.get()
+        self.comment = self.comment_entry.get()
 
         self.bd_connect()
         self.cursor.execute(""" delete from comments where ticker = ?""", (self.ticker,))
@@ -141,7 +154,7 @@ class Aplication(Functions):
         self.frame_tabela_ticker_amount.place(relx=0.3, rely=0.05, relwidth=0.2, relheight=0.5)
 
         self.frame_comments = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.frame_comments.place(relx=0.3, rely=0.6, relwidth=0.2, relheight=0.35)
+        self.frame_comments.place_forget()
 
         self.frame_graphic = Frame(self.window, highlightbackground='black', highlightthickness=4)
         self.frame_graphic.place(relx=0.527, rely=0.05, relwidth=0.45, relheight=0.5)
@@ -208,8 +221,8 @@ class Aplication(Functions):
         self.amount_entry = Spinbox(self.window, from_=0, to=100000000000000, font=('garamond', 13))
         self.amount_entry.place(relx=0.02,rely=0.345,relwidth=0.05,relheight=0.025)
 
-        self.comments_entry = Entry(self.window, font=('garamond', 13))
-        self.comments_entry.place(relx=0.02,rely=0.41,relwidth=0.26,relheight=0.025)
+        self.comment_entry = Entry(self.window, font=('garamond', 13))
+        self.comment_entry.place(relx=0.02,rely=0.41,relwidth=0.26,relheight=0.025)
 
         self.date_entry = Entry(self.window, font=('garamond', 13), fg='grey')
         self.date_entry.place(relx=0.77555,rely=0.675,relwidth=0.05,relheight=0.025)
