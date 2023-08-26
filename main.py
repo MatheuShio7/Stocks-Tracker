@@ -13,6 +13,7 @@ class Functions():
         self.amount_entry.insert(END, 0)
         self.comment_entry.delete(0, END)
 
+
     def clean_earnings_history_entries(self):
         self.date_entry.config(state="normal")
         self.date_entry.delete(0, END)
@@ -20,14 +21,17 @@ class Functions():
         self.date_entry.config(font=('garamond', 13), fg='grey')
         self.value_entry.delete(0, END)
     
+
     #função para se conectar ao banco de dados
     def bd_connect(self): 
         self.connect = sqlite3.connect('stocks_tracker.db')
         self.cursor = self.connect.cursor()
     
+
     #função para se desconectar do banco de dados
     def bd_disconnect(self): 
         self.connect.close()
+
 
     #função para criar as tabelas
     def create_tables(self):
@@ -57,6 +61,7 @@ class Functions():
         self.connect.commit()  
         self.bd_disconnect()
 
+
     def register_stock(self):
         self.ticker = self.ticker_entry.get().upper()
         self.amount = self.amount_entry.get()
@@ -69,6 +74,7 @@ class Functions():
         self.bd_disconnect()
         self.show_table1()
 
+
     def show_table1(self):
         self.ticker_amount_table.delete(*self.ticker_amount_table.get_children())
         self.bd_connect()
@@ -76,6 +82,7 @@ class Functions():
         for i in table1:
             self.ticker_amount_table.insert('', END, values=i)
         self.bd_disconnect()
+
 
     def show_comments_table(self):
         self.ticker = self.ticker_entry.get()
@@ -85,6 +92,7 @@ class Functions():
         for c in table2:
             self.comments_table.insert('', END, values=c)
         self.bd_disconnect()
+
 
     def register_comments(self):
         self.ticker = self.ticker_entry.get().upper()
@@ -97,10 +105,12 @@ class Functions():
         self.connect.commit()
         self.bd_disconnect()
 
+
     def combined_function(self):
         self.register_stock()
         self.register_comments()
         self.clean_stocks_entries()
+
 
     def on_double_click(self, event):
         self.clean_stocks_entries()
@@ -111,8 +121,26 @@ class Functions():
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.ticker_entry.insert(END, col1)
             self.amount_entry.insert(END, col2)
+
+            comment = self.fetch_comment_from_database(col1)  
+            self.comment_entry.delete(0, END)
+            self.comment_entry.insert(END, comment)
+            self.bd_disconnect()
+
             self.frame_comments.place(relx=0.3, rely=0.6, relwidth=0.2, relheight=0.35)
             self.show_comments_table()  
+
+
+    def fetch_comment_from_database(self, ticker):
+        self.bd_connect()
+        query = "SELECT comment FROM comments WHERE ticker = ?"
+        self.cursor.execute(query, (ticker,))
+        result = self.cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return ""
+
 
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
@@ -143,11 +171,13 @@ class Aplication(Functions):
         self.show_table1()
         window.mainloop()
     
+
     def screen_settings(self):
         self.window.title('Stocks Tracker') 
         self.window.configure(background= '#880808') #cor de fundo
         self.window.geometry('1920x1080') #dimensões da tela 
         self.window.resizable(True, True) #possibilidade de redimensionar a tela
+
 
     def frames(self):
         self.frame_tabela_ticker_amount = Frame(self.window, highlightbackground='black', highlightthickness=4)
@@ -161,6 +191,7 @@ class Aplication(Functions):
 
         self.frame_earning_history = Frame(self.window, highlightbackground='black', highlightthickness=4)
         self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
+
 
     def buttons(self):
         #botões do cadastro das ações
@@ -190,6 +221,7 @@ class Aplication(Functions):
         self.update_earning_history_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
 
+
     def texts(self):
         self.ticker_text = Label(self.window, text='Ticker', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
         self.ticker_text.place(relx=0.008,rely=0.255, relwidth=0.05, relheight=0.025)
@@ -212,6 +244,7 @@ class Aplication(Functions):
         self.earning_history_text = Label(self.window, text='Histórico de Proventos', bg='#880808',fg='white', font=('garamond', 17, 'bold'))
         self.earning_history_text.place(relx=0.76,rely=0.61, relwidth=0.15, relheight=0.025)
 
+
     def entries(self):
         
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
@@ -232,6 +265,7 @@ class Aplication(Functions):
         self.value_entry = Entry(self.window, font=('garamond', 13))
         self.value_entry.place(relx=0.792,rely=0.74,relwidth=0.05,relheight=0.025)
 
+
     def pick_date(self, event):
         self.date_window = Toplevel()
         self.date_window.grab_set()
@@ -244,6 +278,7 @@ class Aplication(Functions):
         self.submit_btn.place(x=94, y=190)
         self.date_entry.config(fg='black')
 
+
     def update_date(self):
         selected_date = self.calendar.get_date()
         self.date_entry.config(state="normal")
@@ -252,6 +287,7 @@ class Aplication(Functions):
         self.date_entry.config(state="readonly")
         self.date_window.destroy()
         
+
     def ticker_aumont_table(self):
         self.ticker_amount_table = ttk.Treeview(self.frame_tabela_ticker_amount, height= 3, columns=('column1', 'column2'))
         self.ticker_amount_table.configure(height=5, show='headings')
@@ -271,6 +307,7 @@ class Aplication(Functions):
 
         self.ticker_amount_table.bind('<Double-1>', self.on_double_click)
 
+
     def comments_table(self):
         self.comments_table = ttk.Treeview(self.frame_comments, height=3, columns=('column1'))
         self.comments_table.configure(height=5, show='headings')
@@ -285,6 +322,7 @@ class Aplication(Functions):
         self.scrool_comments_table = Scrollbar(self.frame_comments, orient='vertical')
         self.comments_table.configure(yscroll=self.scrool_comments_table.set)
         self.scrool_comments_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
+
 
     def earning_history_table(self):
         self.earning_history_table = ttk.Treeview(self.frame_earning_history, height=3, columns=('column1', 'column2', 'column3'))
