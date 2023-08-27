@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkcalendar import * 
+from PIL import ImageTk, Image
 import sqlite3
 
 window = Tk()
@@ -12,6 +13,19 @@ class Functions():
         self.amount_entry.delete(0, END)
         self.amount_entry.insert(END, 0)
         self.comment_entry.delete(0, END)
+
+        self.frame_comments.place_forget()
+        self.frame_earning_history.place_forget()
+        self.earning_history_text.place_forget()
+        self.date_text.place_forget()
+        self.value_text.place_forget()
+        self.rs_text.place_forget()
+        self.date_entry.place_forget()
+        self.value_entry.place_forget()
+        self.new_earning_history_button.place_forget()
+        self.clean_earning_history_button.place_forget()
+        self.delete_earning_history_button.place_forget()
+        self.update_earning_history_button.place_forget()
 
 
     def clean_earnings_history_entries(self):
@@ -38,7 +52,7 @@ class Functions():
         self.bd_connect()
         self.cursor.execute("""
             create table if not exists ticker_amount (
-                ticker text not null,
+                ticker text not null check (length(ticker) <= 6),
                 amount int not null,
                 primary key (ticker)
             );""")
@@ -67,11 +81,16 @@ class Functions():
         self.amount = self.amount_entry.get()
 
         self.bd_connect()
-        self.cursor.execute("""insert into ticker_amount (ticker, amount)
-            values (?, ?)""", (self.ticker, self.amount))
-        
-        self.connect.commit()
-        self.bd_disconnect()
+        try:
+            self.cursor.execute("""insert into ticker_amount (ticker, amount)
+                values (?, ?)""", (self.ticker, self.amount))
+            self.connect.commit()
+        except Exception as e:
+            self.connect.rollback()
+            print(f'Erro ao inserir: {e}')
+        finally:
+            self.bd_disconnect
+
         self.show_table1()
 
 
@@ -128,6 +147,17 @@ class Functions():
             self.bd_disconnect()
 
             self.frame_comments.place(relx=0.3, rely=0.6, relwidth=0.2, relheight=0.35)
+            self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
+            self.earning_history_text.place(relx=0.76,rely=0.61, relwidth=0.15, relheight=0.025)
+            self.date_text.place(relx=0.76,rely=0.65, relwidth=0.05, relheight=0.025)
+            self.value_text.place(relx=0.762,rely=0.715, relwidth=0.05, relheight=0.025)
+            self.rs_text.place(relx=0.76, rely=0.74, relwidth=0.05, relheight=0.025)
+            self.date_entry.place(relx=0.77555,rely=0.675,relwidth=0.05,relheight=0.025)
+            self.value_entry.place(relx=0.792,rely=0.74,relwidth=0.05,relheight=0.025)
+            self.new_earning_history_button.place(relx=0.76,rely=0.79,relwidth=0.05,relheight=0.03)
+            self.clean_earning_history_button.place(relx=0.88,rely=0.79,relwidth=0.05,relheight=0.03)
+            self.delete_earning_history_button.place(relx=0.82,rely=0.79,relwidth=0.05,relheight=0.03)
+            self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
             self.show_comments_table()  
 
 
@@ -152,6 +182,19 @@ class Functions():
         self.cursor.execute(""" delete from ticker_amount where ticker = ?""", (self.ticker,))
         self.connect.commit()
 
+        self.frame_comments.place_forget()
+        self.frame_earning_history.place_forget()
+        self.earning_history_text.place_forget()
+        self.date_text.place_forget()
+        self.value_text.place_forget()
+        self.rs_text.place_forget()
+        self.date_entry.place_forget()
+        self.value_entry.place_forget()
+        self.new_earning_history_button.place_forget()
+        self.clean_earning_history_button.place_forget()
+        self.delete_earning_history_button.place_forget()
+        self.update_earning_history_button.place_forget()
+
         self.bd_disconnect()
         self.clean_stocks_entries()
         self.show_table1()
@@ -160,6 +203,7 @@ class Aplication(Functions):
     def __init__(self):
         self.window = window
         self.screen_settings()
+        self.images()
         self.frames()
         self.buttons()
         self.texts()
@@ -174,9 +218,17 @@ class Aplication(Functions):
 
     def screen_settings(self):
         self.window.title('Stocks Tracker') 
+        self.window.iconbitmap('lírio_icon.ico')
         self.window.configure(background= '#880808') #cor de fundo
         self.window.geometry('1920x1080') #dimensões da tela 
         self.window.resizable(True, True) #possibilidade de redimensionar a tela
+
+
+    def images(self):
+        spider = Image.open("spider.png")
+        self.spider_img = ImageTk.PhotoImage(spider)
+        self.spider_label = Label(self.window, image=self.spider_img, highlightbackground='#880808')
+        self.spider_label.place(relx=0.1, rely=0.15, relwidth=0.3, relheight=0.7)
 
 
     def frames(self):
@@ -190,36 +242,32 @@ class Aplication(Functions):
         self.frame_graphic.place(relx=0.527, rely=0.05, relwidth=0.45, relheight=0.5)
 
         self.frame_earning_history = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
+        self.frame_earning_history.place_forget()
 
 
     def buttons(self):
         #botões do cadastro das ações
-        self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.combined_function)
+        self.new_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.combined_function)
         self.new_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
 
         self.clean_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.clean_stocks_entries)
-        self.clean_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
+        self.clean_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.delete_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.delete_stock)
-        self.delete_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
+        self.delete_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.delete_stock)
+        self.delete_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
 
         self.update_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
         self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
 
         #botões do cadastro do histórico de proventos
-        self.new_earning_history_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
-        self.new_earning_history_button.place(relx=0.76,rely=0.79,relwidth=0.05,relheight=0.03)
+        self.new_earning_history_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
 
         self.clean_earning_history_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
                                    font=('garamond', 11, 'bold'), command=self.clean_earnings_history_entries)
-        self.clean_earning_history_button.place(relx=0.82,rely=0.79,relwidth=0.05,relheight=0.03)
 
-        self.delete_earning_history_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
-        self.delete_earning_history_button.place(relx=0.88,rely=0.79,relwidth=0.05,relheight=0.03)
+        self.delete_earning_history_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
 
         self.update_earning_history_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
-        self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
 
 
     def texts(self):
@@ -233,16 +281,12 @@ class Aplication(Functions):
         self.comments_text.place(relx=0.016,rely=0.385, relwidth=0.05, relheight=0.025)
 
         self.date_text = Label(self.window, text='Data', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.date_text.place(relx=0.76,rely=0.65, relwidth=0.05, relheight=0.025)
 
         self.value_text = Label(self.window, text='Valor', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.value_text.place(relx=0.762,rely=0.715, relwidth=0.05, relheight=0.025)
 
         self.rs_text = Label(self.window, text='R$', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.rs_text.place(relx=0.76, rely=0.74, relwidth=0.05, relheight=0.025)
 
         self.earning_history_text = Label(self.window, text='Histórico de Proventos', bg='#880808',fg='white', font=('garamond', 17, 'bold'))
-        self.earning_history_text.place(relx=0.76,rely=0.61, relwidth=0.15, relheight=0.025)
 
 
     def entries(self):
@@ -258,12 +302,10 @@ class Aplication(Functions):
         self.comment_entry.place(relx=0.02,rely=0.41,relwidth=0.26,relheight=0.025)
 
         self.date_entry = Entry(self.window, font=('garamond', 13), fg='grey')
-        self.date_entry.place(relx=0.77555,rely=0.675,relwidth=0.05,relheight=0.025)
         self.date_entry.insert(0, "yyyy/mm/dd")
         self.date_entry.bind('<1>', self.pick_date)
 
         self.value_entry = Entry(self.window, font=('garamond', 13))
-        self.value_entry.place(relx=0.792,rely=0.74,relwidth=0.05,relheight=0.025)
 
 
     def pick_date(self, event):
