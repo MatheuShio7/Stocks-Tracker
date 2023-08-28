@@ -89,7 +89,7 @@ class Functions():
             self.connect.rollback()
             print(f'Erro ao inserir: {e}')
         finally:
-            self.bd_disconnect
+            self.bd_disconnect()
 
         self.show_table1()
 
@@ -135,6 +135,7 @@ class Functions():
         self.clean_stocks_entries()
         self.amount_entry.delete(0, END)
         selected_stock = self.ticker_amount_table.selection()
+        self.old_ticker = self.ticker_entry.get()
 
         if selected_stock:  
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
@@ -198,7 +199,52 @@ class Functions():
         self.bd_disconnect()
         self.clean_stocks_entries()
         self.show_table1()
-        
+    
+
+    def update_info(self):
+        self.ticker = self.ticker_entry.get()
+        self.amount = self.amount_entry.get()
+        self.comment = self.comment_entry.get()
+        self.bd_connect()
+
+        self.cursor.execute(""" update ticker_amount set ticker = ? where ticker = ?""", (self.ticker, self.old_ticker))
+        self.cursor.execute(""" update ticker_amount set amount = ? where ticker = ?""", (self.amount, self.ticker))
+        self.cursor.execute(""" update comments set ticker = ?, comment = ? where ticker = ?""", (self.ticker, self.comment, self.ticker))
+
+        self.connect.commit()
+        self.bd_disconnect()
+        self.show_table1()
+        self.show_comments_table()
+        self.ticker_entry.delete(0, END)
+        self.amount_entry.delete(0, END)
+        self.amount_entry.insert(END, 0)
+        self.comment_entry.delete(0, END)
+
+
+    def add_eh(self):
+        self.ticker = self.ticker_entry.get()
+        self.date = self.date_entry.get()
+        self.value = self.value_entry.get()
+
+        self.bd_connect()
+        self.cursor.execute(""" insert into earning_history (ticker, date, value) values (?, ?, ?)""", (self.ticker, self.date, self.value))
+
+        self.connect.commit()
+        self.bd_disconnect()
+
+        self.show_eh_table()
+        self.clean_earnings_history_entries()
+
+
+    def show_eh_table(self):
+        self.earning_history_table.delete(*self.earning_history_table.get_children())  
+        self.bd_connect()
+        eh_table = self.cursor.execute(""" select ticker, date, value from earning_history order by date; """)
+        for e in eh_table:
+            self.earning_history_table.insert('', END, values=e)
+        self.bd_disconnect()
+
+
 class Aplication(Functions):
     def __init__(self):
         self.window = window
@@ -221,6 +267,7 @@ class Aplication(Functions):
         self.window.iconbitmap('lírio_icon.ico')
         self.window.configure(background= '#880808') #cor de fundo
         self.window.geometry('1920x1080') #dimensões da tela 
+        self.window.state('zoomed')
         self.window.resizable(True, True) #possibilidade de redimensionar a tela
 
 
@@ -228,7 +275,7 @@ class Aplication(Functions):
         spider = Image.open("spider.png")
         self.spider_img = ImageTk.PhotoImage(spider)
         self.spider_label = Label(self.window, image=self.spider_img, highlightbackground='#880808')
-        self.spider_label.place(relx=0.1, rely=0.15, relwidth=0.3, relheight=0.7)
+        self.spider_label.place(relx=0.105, rely=0.15, relwidth=0.3, relheight=0.7)
 
 
     def frames(self):
@@ -256,11 +303,11 @@ class Aplication(Functions):
         self.delete_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.delete_stock)
         self.delete_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
 
-        self.update_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.update_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.update_info)
         self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
 
         #botões do cadastro do histórico de proventos
-        self.new_earning_history_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.new_earning_history_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.add_eh)
 
         self.clean_earning_history_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
                                    font=('garamond', 11, 'bold'), command=self.clean_earnings_history_entries)
@@ -341,6 +388,7 @@ class Aplication(Functions):
 
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("garamond", 12, "bold"))
+        style.configure('Treeview', font=('garamond', 12))
         self.ticker_amount_table.place(relx=0,rely=0,relwidth=0.95,relheight=1)
 
         self.scrool_ticker_amount_table = Scrollbar(self.frame_tabela_ticker_amount, orient='vertical')
