@@ -160,6 +160,7 @@ class Functions():
             self.delete_earning_history_button.place(relx=0.82,rely=0.79,relwidth=0.05,relheight=0.03)
             self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
             self.show_comments_table()  
+            self.show_eh_table()
 
 
     def fetch_comment_from_database(self, ticker):
