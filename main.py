@@ -15,7 +15,6 @@ class Functions():
         self.comment_entry.delete(0, END)
 
         self.frame_comments.place_forget()
-        self.frame_earning_history.place_forget()
         self.earning_history_text.place_forget()
         self.date_text.place_forget()
         self.value_text.place_forget()
@@ -27,12 +26,12 @@ class Functions():
         self.delete_earning_history_button.place_forget()
         self.update_earning_history_button.place_forget()
 
+        self.show_eh_table()
+
 
     def clean_earnings_history_entries(self):
         self.date_entry.config(state="normal")
         self.date_entry.delete(0, END)
-        self.date_entry.insert(0, "yyyy/mm/dd")
-        self.date_entry.config(font=('garamond', 13), fg='grey')
         self.value_entry.delete(0, END)
     
 
@@ -132,6 +131,7 @@ class Functions():
 
 
     def on_double_click(self, event):
+        self.clean_earnings_history_entries()
         self.clean_stocks_entries()
         self.amount_entry.delete(0, END)
         selected_stock = self.ticker_amount_table.selection()
@@ -145,10 +145,10 @@ class Functions():
             comment = self.fetch_comment_from_database(col1)  
             self.comment_entry.delete(0, END)
             self.comment_entry.insert(END, comment)
-            self.bd_disconnect()
+
+            self.bd_connect()
 
             self.frame_comments.place(relx=0.3, rely=0.6, relwidth=0.2, relheight=0.35)
-            self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
             self.earning_history_text.place(relx=0.76,rely=0.61, relwidth=0.15, relheight=0.025)
             self.date_text.place(relx=0.76,rely=0.65, relwidth=0.05, relheight=0.025)
             self.value_text.place(relx=0.762,rely=0.715, relwidth=0.05, relheight=0.025)
@@ -159,8 +159,16 @@ class Functions():
             self.clean_earning_history_button.place(relx=0.88,rely=0.79,relwidth=0.05,relheight=0.03)
             self.delete_earning_history_button.place(relx=0.82,rely=0.79,relwidth=0.05,relheight=0.03)
             self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
+            
             self.show_comments_table()  
-            self.show_eh_table()
+
+            self.earning_history_table.delete(*self.earning_history_table.get_children())
+            
+            self.bd_connect()
+            selected_table = self.cursor.execute("""select ticker, date, value from earning_history where ticker = ? order by date desc""", (col1,))
+            for s in selected_table:
+                self.earning_history_table.insert('', END, values=s)
+            self.bd_disconnect()
 
 
     def fetch_comment_from_database(self, ticker):
@@ -185,7 +193,6 @@ class Functions():
         self.connect.commit()
 
         self.frame_comments.place_forget()
-        self.frame_earning_history.place_forget()
         self.earning_history_text.place_forget()
         self.date_text.place_forget()
         self.value_text.place_forget()
@@ -200,6 +207,7 @@ class Functions():
         self.bd_disconnect()
         self.clean_stocks_entries()
         self.show_table1()
+        self.show_eh_table()
     
 
     def update_info(self):
@@ -216,10 +224,6 @@ class Functions():
         self.bd_disconnect()
         self.show_table1()
         self.show_comments_table()
-        self.ticker_entry.delete(0, END)
-        self.amount_entry.delete(0, END)
-        self.amount_entry.insert(END, 0)
-        self.comment_entry.delete(0, END)
 
 
     def add_eh(self):
@@ -233,17 +237,80 @@ class Functions():
         self.connect.commit()
         self.bd_disconnect()
 
-        self.show_eh_table()
+        self.earning_history_table.delete(*self.earning_history_table.get_children())  
+        self.bd_connect()
+        eh_table = self.cursor.execute(""" select ticker, date, value from earning_history where ticker = ? order by date desc; """, (self.ticker,))
+        for e in eh_table:
+            self.earning_history_table.insert('', END, values=e)
+        self.bd_disconnect()
         self.clean_earnings_history_entries()
 
 
     def show_eh_table(self):
         self.earning_history_table.delete(*self.earning_history_table.get_children())  
         self.bd_connect()
-        eh_table = self.cursor.execute(""" select ticker, date, value from earning_history order by date; """)
+        eh_table = self.cursor.execute(""" select ticker, date, value from earning_history order by date desc; """)
         for e in eh_table:
             self.earning_history_table.insert('', END, values=e)
         self.bd_disconnect()
+
+
+    def double_click_eh(self, event):
+        self.clean_earnings_history_entries()
+        self.date_entry.delete(0, END)
+        self.value_entry.delete(0, END)
+        selected_eh = self.earning_history_table.selection()
+
+        if selected_eh:
+            col1, col2, col3 = self.earning_history_table.item(selected_eh[0], 'values')
+            self.value_entry.insert(END, col3)
+            self.date_entry.insert(END, col2)
+
+        self.earning_history_text.place(relx=0.76,rely=0.61, relwidth=0.15, relheight=0.025)
+        self.date_text.place(relx=0.76,rely=0.65, relwidth=0.05, relheight=0.025)
+        self.value_text.place(relx=0.762,rely=0.715, relwidth=0.05, relheight=0.025)
+        self.rs_text.place(relx=0.76, rely=0.74, relwidth=0.05, relheight=0.025)
+        self.date_entry.place(relx=0.77555,rely=0.675,relwidth=0.05,relheight=0.025)
+        self.value_entry.place(relx=0.792,rely=0.74,relwidth=0.05,relheight=0.025)
+        self.new_earning_history_button.place(relx=0.76,rely=0.79,relwidth=0.05,relheight=0.03)
+        self.clean_earning_history_button.place(relx=0.88,rely=0.79,relwidth=0.05,relheight=0.03)
+        self.delete_earning_history_button.place(relx=0.82,rely=0.79,relwidth=0.05,relheight=0.03)
+        self.update_earning_history_button.place(relx=0.94,rely=0.79,relwidth=0.05,relheight=0.03)
+
+        self.old_date = self.date_entry.get()
+        self.old_value = self.value_entry.get()
+
+
+    def delete_eh(self):
+        self.data = self.date_entry.get()
+        self.value = self.value_entry.get()
+
+        self.bd_connect()
+        self.cursor.execute("""delete from earning_history where date = ? and value = ?""", (self.data, self.value))
+        self.connect.commit()
+        self.bd_disconnect()
+        
+        self.clean_earnings_history_entries()
+        self.show_eh_table()
+
+
+    def update_eh(self):
+        self.ticker = self.ticker_entry.get()
+        self.data = self.date_entry.get()
+        self.value = self.value_entry.get()
+
+        print("Ticker:", self.ticker)
+        print("Old Date:", self.old_date)
+        print("Old Value:", self.old_value)
+        print("New Date:", self.data)
+        print("New Value:", self.value)
+
+        self.bd_connect()
+        self.cursor.execute("""update earning_history set date = ? where date = ? and value = ? and ticker = ?""", (self.data, self.old_date, self.old_value, self.ticker))
+        self.cursor.execute("""update earning_history set value = ? where date = ? and value = ? and ticker = ?""", (self.value, self.old_date, self.old_value, self.ticker))
+        self.bd_disconnect()
+
+        self.show_eh_table()
 
 
 class Aplication(Functions):
@@ -260,6 +327,7 @@ class Aplication(Functions):
         self.earning_history_table()
         self.create_tables()
         self.show_table1()
+        self.show_eh_table()
         window.mainloop()
     
 
@@ -290,7 +358,7 @@ class Aplication(Functions):
         self.frame_graphic.place(relx=0.527, rely=0.05, relwidth=0.45, relheight=0.5)
 
         self.frame_earning_history = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.frame_earning_history.place_forget()
+        self.frame_earning_history.place(relx=0.55,rely=0.6,relwidth=0.2,relheight=0.35)
 
 
     def buttons(self):
@@ -313,9 +381,9 @@ class Aplication(Functions):
         self.clean_earning_history_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
                                    font=('garamond', 11, 'bold'), command=self.clean_earnings_history_entries)
 
-        self.delete_earning_history_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.delete_earning_history_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.delete_eh)
 
-        self.update_earning_history_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'))
+        self.update_earning_history_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.update_eh)
 
 
     def texts(self):
@@ -349,8 +417,7 @@ class Aplication(Functions):
         self.comment_entry = Entry(self.window, font=('garamond', 13))
         self.comment_entry.place(relx=0.02,rely=0.41,relwidth=0.26,relheight=0.025)
 
-        self.date_entry = Entry(self.window, font=('garamond', 13), fg='grey')
-        self.date_entry.insert(0, "yyyy/mm/dd")
+        self.date_entry = Entry(self.window, font=('garamond', 13))
         self.date_entry.bind('<1>', self.pick_date)
 
         self.value_entry = Entry(self.window, font=('garamond', 13))
@@ -433,5 +500,7 @@ class Aplication(Functions):
         self.scrool_earning_history_table = Scrollbar(self.frame_earning_history, orient='vertical')
         self.earning_history_table.configure(yscroll=self.scrool_earning_history_table.set)
         self.scrool_earning_history_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
+
+        self.earning_history_table.bind('<Double-1>', self.double_click_eh)
 
 Aplication()
