@@ -76,8 +76,16 @@ class Functions():
 
 
     def register_stock(self):
-        self.ticker = self.ticker_entry.get().upper()
+        self.ticker = self.ticker_entry.get().upper().strip()
         self.amount = self.amount_entry.get()
+
+        if not self.ticker: #verificar se algum ticker foi digitado, impossibilitando a criação de registros sem ticker
+            return
+        
+        try: #verificar se o campo qauntidade está recebendo um valor inteiro
+            int_amount = int(self.amount)
+        except ValueError:
+            return
 
         self.bd_connect()
         try:
@@ -229,7 +237,15 @@ class Functions():
     def add_eh(self):
         self.ticker = self.ticker_entry.get()
         self.date = self.date_entry.get()
-        self.value = self.value_entry.get()
+        self.value = self.value_entry.get().strip()
+
+        if not self.value:
+            return  
+        
+        try:
+            float_value = float(self.value)
+        except ValueError:
+            return
 
         self.bd_connect()
         self.cursor.execute(""" insert into earning_history (ticker, date, value) values (?, ?, ?)""", (self.ticker, self.date, self.value))
@@ -286,7 +302,7 @@ class Functions():
         self.value = self.value_entry.get()
 
         self.bd_connect()
-        self.cursor.execute("""delete from earning_history where date = ? and value = ?""", (self.data, self.value))
+        self.cursor.execute("""delete from earning_history where rowid in (select rowid from earning_history where date = ? and value = ? limit 1)""", (self.data, self.value))
         self.connect.commit()
         self.bd_disconnect()
         
@@ -295,22 +311,17 @@ class Functions():
 
 
     def update_eh(self):
-        self.ticker = self.ticker_entry.get()
         self.data = self.date_entry.get()
         self.value = self.value_entry.get()
 
-        print("Ticker:", self.ticker)
-        print("Old Date:", self.old_date)
-        print("Old Value:", self.old_value)
-        print("New Date:", self.data)
-        print("New Value:", self.value)
-
         self.bd_connect()
-        self.cursor.execute("""update earning_history set date = ? where date = ? and value = ? and ticker = ?""", (self.data, self.old_date, self.old_value, self.ticker))
-        self.cursor.execute("""update earning_history set value = ? where date = ? and value = ? and ticker = ?""", (self.value, self.old_date, self.old_value, self.ticker))
+        self.cursor.execute("""update earning_history set date = ? where date = ? and value = ?""", (self.data, self.old_date, self.old_value))
+        self.cursor.execute("""update earning_history set value = ? where date = ? and value = ?""", (self.value, self.old_date, self.old_value))
+        self.connect.commit()
         self.bd_disconnect()
 
         self.show_eh_table()
+        self.clean_earnings_history_entries() 
 
 
 class Aplication(Functions):
