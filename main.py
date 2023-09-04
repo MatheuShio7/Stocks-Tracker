@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkcalendar import * 
-from PIL import ImageTk, Image
+from PIL import ImageTk
 import sqlite3
 import base64 
 
@@ -86,6 +86,7 @@ class Functions():
     def register_stock(self):
         self.ticker = self.ticker_entry.get().upper().strip()
         self.amount = self.amount_entry.get()
+        self.comment = self.comment_entry.get()
 
         if not self.ticker: #verificar se algum ticker foi digitado, impossibilitando a criação de registros sem ticker
             return
@@ -99,6 +100,9 @@ class Functions():
         try:
             self.cursor.execute("""insert into ticker_amount (ticker, amount)
                 values (?, ?)""", (self.ticker, self.amount))
+            if self.comment:
+                self.cursor.execute(""" insert into comments (ticker, comment)
+            values (?, ?)""", (self.ticker, self.comment))
             self.connect.commit()
         except Exception as e:
             self.connect.rollback()
@@ -126,24 +130,6 @@ class Functions():
         for c in table2:
             self.comments_table.insert('', END, values=c)
         self.bd_disconnect()
-
-
-    def register_comments(self):
-        self.ticker = self.ticker_entry.get().upper()
-        self.comment = self.comment_entry.get()
-
-        self.bd_connect()
-        self.cursor.execute(""" insert into comments (ticker, comment)
-            values (?, ?)""", (self.ticker, self.comment))
-        
-        self.connect.commit()
-        self.bd_disconnect()
-
-
-    def combined_function(self):
-        self.register_stock()
-        self.register_comments()
-        self.clean_stocks_entries()
 
 
     def on_double_click(self, event):
@@ -245,6 +231,11 @@ class Functions():
         self.bd_disconnect()
         self.show_table1()
         self.show_comments_table()
+        
+        self.ticker_entry.delete(0, END)
+        self.amount_entry.delete(0, END)
+        self.amount_entry.insert(END, 0)
+        self.comment_entry.delete(0, END)
 
 
     def add_eh(self):
@@ -433,7 +424,7 @@ class Aplication(Functions):
 
     def buttons(self):
         #botões do cadastro das ações
-        self.new_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.combined_function, activebackground='#92000a', activeforeground='white')
+        self.new_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.register_stock, activebackground='#92000a', activeforeground='white')
         self.new_button.bind("<Enter>", lambda event, button=self.new_button: button.config(bg='#92000a', fg='white'))
         self.new_button.bind("<Leave>", lambda event, button=self.new_button: button.config(bg='#800020', fg='white'))
 
