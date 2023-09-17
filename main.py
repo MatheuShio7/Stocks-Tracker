@@ -13,9 +13,11 @@ class Functions():
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
         self.amount_entry.insert(END, 0)
-        self.comment_entry.delete(0, END)
 
-        self.frame_comments.place_forget()
+        self.new_button.place_forget()
+        self.delete_button.place_forget()
+        self.clean_button.place_forget()
+        self.update_button.place_forget()
         self.date_text.place_forget()
         self.value_text.place_forget()
         self.rs_text.place_forget()
@@ -56,13 +58,6 @@ class Functions():
                 amount int not null,
                 primary key (ticker)
             );""")
-        
-        self.cursor.execute("""
-            create table if not exists comments (
-                ticker text not null,
-                comment text,
-                foreign key (ticker) references ticker_amount (ticker)
-            );""")
 
         self.cursor.execute("""
             create table if not exists earning_history (
@@ -76,17 +71,14 @@ class Functions():
         self.bd_disconnect()
 
 
-    def on_click(self, event):
+    def on_type(self, event):
         self.new_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
-        self.delete_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
-        self.clean_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
-        self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
+        self.clean_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
 
 
     def register_stock(self):
         self.ticker = self.ticker_entry.get().upper().strip()
         self.amount = self.amount_entry.get()
-        self.comment = self.comment_entry.get()
 
         if not self.ticker: #verificar se algum ticker foi digitado, impossibilitando a criação de registros sem ticker
             return
@@ -100,9 +92,6 @@ class Functions():
         try:
             self.cursor.execute("""insert into ticker_amount (ticker, amount)
                 values (?, ?)""", (self.ticker, self.amount))
-            if self.comment:
-                self.cursor.execute(""" insert into comments (ticker, comment)
-            values (?, ?)""", (self.ticker, self.comment))
             self.connect.commit()
         except Exception as e:
             self.connect.rollback()
@@ -122,16 +111,6 @@ class Functions():
         self.bd_disconnect()
 
 
-    def show_comments_table(self):
-        self.ticker = self.ticker_entry.get()
-        self.comments_table.delete(*self.comments_table.get_children())
-        self.bd_connect()
-        table2 = self.cursor.execute(""" select comment from comments where ticker = ?""", (self.ticker,))
-        for c in table2:
-            self.comments_table.insert('', END, values=c)
-        self.bd_disconnect()
-
-
     def on_double_click(self, event):
         self.clean_earnings_history_entries()
         self.clean_stocks_entries()
@@ -145,17 +124,12 @@ class Functions():
             self.ticker_entry.insert(END, col1)
             self.amount_entry.insert(END, col2)
 
-            comment = self.fetch_comment_from_database(col1)  
-            self.comment_entry.delete(0, END)
-            self.comment_entry.insert(END, comment)
-
             self.bd_connect()
 
             self.new_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
             self.delete_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
             self.clean_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
             self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
-            self.frame_comments.place(relx=0.3,rely=0.6,relwidth=0.2,relheight=0.35)
             self.date_text.place(relx=0.76,rely=0.15, relwidth=0.05, relheight=0.025)
             self.date_entry.place(relx=0.775,rely=0.175,relwidth=0.05,relheight=0.025)
             self.value_text.place(relx=0.762,rely=0.21, relwidth=0.05, relheight=0.025)
@@ -165,8 +139,6 @@ class Functions():
             self.delete_earning_history_button.place(relx=0.82,rely=0.275,relwidth=0.05,relheight=0.03)
             self.clean_earning_history_button.place(relx=0.88,rely=0.275,relwidth=0.05,relheight=0.03)
             self.update_earning_history_button.place(relx=0.94,rely=0.275,relwidth=0.05,relheight=0.03)
-            
-            self.show_comments_table()  
 
             self.earning_history_table.delete(*self.earning_history_table.get_children())
             
@@ -179,28 +151,14 @@ class Functions():
             self.bd_disconnect()
 
 
-    def fetch_comment_from_database(self, ticker):
-        self.bd_connect()
-        query = "SELECT comment FROM comments WHERE ticker = ?"
-        self.cursor.execute(query, (ticker,))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return ""
-
-
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
         self.amount = self.amount_entry.get()
-        self.comment = self.comment_entry.get()
 
         self.bd_connect()
-        self.cursor.execute(""" delete from comments where ticker = ?""", (self.ticker,))
         self.cursor.execute(""" delete from ticker_amount where ticker = ?""", (self.ticker,))
         self.connect.commit()
 
-        self.frame_comments.place_forget()
         self.date_text.place_forget()
         self.value_text.place_forget()
         self.rs_text.place_forget()
@@ -220,22 +178,18 @@ class Functions():
     def update_info(self):
         self.ticker = self.ticker_entry.get()
         self.amount = self.amount_entry.get()
-        self.comment = self.comment_entry.get()
         self.bd_connect()
 
         self.cursor.execute(""" update ticker_amount set ticker = ? where ticker = ?""", (self.ticker, self.old_ticker))
         self.cursor.execute(""" update ticker_amount set amount = ? where ticker = ?""", (self.amount, self.ticker))
-        self.cursor.execute(""" update comments set ticker = ?, comment = ? where ticker = ?""", (self.ticker, self.comment, self.ticker))
 
         self.connect.commit()
         self.bd_disconnect()
         self.show_table1()
-        self.show_comments_table()
         
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
         self.amount_entry.insert(END, 0)
-        self.comment_entry.delete(0, END)
 
 
     def add_eh(self):
@@ -381,7 +335,6 @@ class Aplication(Functions):
         self.texts()
         self.entries()
         self.ticker_aumont_table()
-        self.comments_table()
         self.earning_history_table()
         self.create_tables()
         self.show_table1()
@@ -393,6 +346,7 @@ class Aplication(Functions):
         self.window.title('Stocks Tracker')
         self.window.configure(background= '#880808') #cor de fundo
         self.window.geometry('1920x1080') #dimensões da tela 
+        self.window.iconbitmap('lírio_icon.ico')
         self.window.state('zoomed')
         self.window.resizable(True, True) #possibilidade de redimensionar a tela
 
@@ -415,16 +369,13 @@ class Aplication(Functions):
         self.frame_tabela_ticker_amount = Frame(self.window, highlightbackground='black', highlightthickness=4)
         self.frame_tabela_ticker_amount.place(relx=0.3, rely=0.05, relwidth=0.2, relheight=0.5)
 
-        self.frame_comments = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.frame_comments.place_forget()
-
         self.frame_earning_history = Frame(self.window, highlightbackground='black', highlightthickness=4)
         self.frame_earning_history.place(relx=0.67, rely=0.13, relwidth=0.2, relheight=0.42)
 
 
     def buttons(self):
         #botões do cadastro das ações
-        self.new_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.register_stock, activebackground='#92000a', activeforeground='white')
+        self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.register_stock, activebackground='#92000a', activeforeground='white')
         self.new_button.bind("<Enter>", lambda event, button=self.new_button: button.config(bg='#92000a', fg='white'))
         self.new_button.bind("<Leave>", lambda event, button=self.new_button: button.config(bg='#800020', fg='white'))
 
@@ -432,7 +383,7 @@ class Aplication(Functions):
         self.clean_button.bind("<Enter>", lambda event, button=self.clean_button: button.config(bg='#92000a', fg='white'))
         self.clean_button.bind("<Leave>", lambda event, button=self.clean_button: button.config(bg='#800020', fg='white'))
 
-        self.delete_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.delete_stock, activebackground='#92000a', activeforeground='white')
+        self.delete_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.delete_stock, activebackground='#92000a', activeforeground='white')
         self.delete_button.bind("<Enter>", lambda event, button=self.delete_button: button.config(bg='#92000a', fg='white'))
         self.delete_button.bind("<Leave>", lambda event, button=self.delete_button: button.config(bg='#800020', fg='white'))
 
@@ -441,7 +392,7 @@ class Aplication(Functions):
         self.update_button.bind("<Leave>", lambda event, button=self.update_button: button.config(bg='#800020', fg='white'))
 
         #botões do cadastro do histórico de proventos
-        self.new_earning_history_button = Button(self.window, text='+', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.add_eh, activebackground='#92000a', activeforeground='white')
+        self.new_earning_history_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.add_eh, activebackground='#92000a', activeforeground='white')
         self.new_earning_history_button.bind("<Enter>", lambda event, button=self.new_earning_history_button: button.config(bg='#92000a', fg='white'))
         self.new_earning_history_button.bind("<Leave>", lambda event, button=self.new_earning_history_button: button.config(bg='#800020', fg='white'))
 
@@ -450,7 +401,7 @@ class Aplication(Functions):
         self.clean_earning_history_button.bind("<Enter>", lambda event, button=self.clean_earning_history_button: button.config(bg='#92000a', fg='white'))
         self.clean_earning_history_button.bind("<Leave>", lambda event, button=self.clean_earning_history_button: button.config(bg='#800020', fg='white'))
 
-        self.delete_earning_history_button = Button(self.window, text='-', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.delete_eh, activebackground='#92000a', activeforeground='white')
+        self.delete_earning_history_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.delete_eh, activebackground='#92000a', activeforeground='white')
         self.delete_earning_history_button.bind("<Enter>", lambda event, button=self.delete_earning_history_button: button.config(bg='#92000a', fg='white'))
         self.delete_earning_history_button.bind("<Leave>", lambda event, button=self.delete_earning_history_button: button.config(bg='#800020', fg='white'))
 
@@ -461,13 +412,10 @@ class Aplication(Functions):
 
     def texts(self):
         self.ticker_text = Label(self.window, text='Ticker', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.ticker_text.place(relx=0.008,rely=0.255, relwidth=0.05, relheight=0.025)
+        self.ticker_text.place(relx=0.008,rely=0.31, relwidth=0.05, relheight=0.025)
 
         self.amount_text = Label(self.window, text='Quantidade', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.amount_text.place(relx=0.018,rely=0.32, relwidth=0.05, relheight=0.025)
-
-        self.comments_text = Label(self.window, text='Descrição', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
-        self.comments_text.place(relx=0.016,rely=0.385, relwidth=0.05, relheight=0.025)
+        self.amount_text.place(relx=0.018,rely=0.375, relwidth=0.05, relheight=0.025)
 
         self.date_text = Label(self.window, text='Data', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
 
@@ -482,16 +430,12 @@ class Aplication(Functions):
     def entries(self):
         
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
-        self.ticker_entry.place(relx=0.02,rely=0.28,relwidth=0.05,relheight=0.025)
-        self.ticker_entry.bind('<1>', self.on_click)
+        self.ticker_entry.place(relx=0.02,rely=0.335,relwidth=0.05,relheight=0.025)
+        self.ticker_entry.bind('<Key>', self.on_type)
 
         self.amount_entry = Spinbox(self.window, from_=0, to=100000000000000, font=('garamond', 13))
-        self.amount_entry.place(relx=0.02,rely=0.345,relwidth=0.05,relheight=0.025)
-        self.amount_entry.bind('<1>', self.on_click)
-
-        self.comment_entry = Entry(self.window, font=('garamond', 13))
-        self.comment_entry.place(relx=0.02,rely=0.41,relwidth=0.26,relheight=0.025)
-        self.comment_entry.bind('<1>', self.on_click) 
+        self.amount_entry.place(relx=0.02,rely=0.4,relwidth=0.05,relheight=0.025)
+        self.amount_entry.bind('<Key>', self.on_type)
 
         self.date_entry = Entry(self.window, font=('garamond', 13))
         self.date_entry.bind('<1>', self.pick_date)
@@ -540,22 +484,6 @@ class Aplication(Functions):
         self.scrool_ticker_amount_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
 
         self.ticker_amount_table.bind('<Double-1>', self.on_double_click)
-
-
-    def comments_table(self):
-        self.comments_table = ttk.Treeview(self.frame_comments, height=3, columns=('column1'))
-        self.comments_table.configure(height=5, show='headings')
-        self.comments_table.heading('#1', text='Descrição')
-
-        self.comments_table.column('#1', width=10)
-
-        style = ttk.Style()
-        style.configure("Treeview.Heading", font=("garamond", 12, "bold"))
-        self.comments_table.place(relx=0, rely=0, relwidth=0.95, relheight=1)
-
-        self.scrool_comments_table = Scrollbar(self.frame_comments, orient='vertical')
-        self.comments_table.configure(yscroll=self.scrool_comments_table.set)
-        self.scrool_comments_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
 
 
     def earning_history_table(self):
