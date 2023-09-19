@@ -14,10 +14,6 @@ class Functions():
         self.amount_entry.delete(0, END)
         self.amount_entry.insert(END, 0)
 
-        self.new_button.place_forget()
-        self.delete_button.place_forget()
-        self.clean_button.place_forget()
-        self.update_button.place_forget()
         self.date_text.place_forget()
         self.value_text.place_forget()
         self.rs_text.place_forget()
@@ -94,6 +90,7 @@ class Functions():
             self.bd_disconnect()
 
         self.show_table1()
+        self.clean_stocks_entries()
 
 
     def show_table1(self):
@@ -121,9 +118,6 @@ class Functions():
 
             self.bd_connect()
 
-            self.delete_button.place(relx=0.02,rely=0.46,relwidth=0.05,relheight=0.03)
-            self.clean_button.place(relx=0.09,rely=0.46,relwidth=0.05,relheight=0.03)
-            self.update_button.place(relx=0.16,rely=0.46,relwidth=0.05,relheight=0.03)
             self.date_text.place(relx=0.585,rely=0.635, relwidth=0.05, relheight=0.025)
             self.date_entry.place(relx=0.6005,rely=0.660,relwidth=0.05,relheight=0.025)
             self.value_text.place(relx=0.587,rely=0.7, relwidth=0.05, relheight=0.025)
@@ -153,6 +147,7 @@ class Functions():
 
         self.bd_connect()
         self.cursor.execute(""" delete from ticker_amount where ticker = ?""", (self.ticker,))
+        self.cursor.execute(""" delete from earning_history where ticker = ?""", (self.ticker,))
         self.connect.commit()
 
         self.date_text.place_forget()
