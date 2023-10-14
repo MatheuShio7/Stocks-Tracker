@@ -7,8 +7,9 @@ import base64
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import requests
 import datetime as dt
+import yfinance as yf
+import matplotlib.dates as mdates
 
 window = Tk()
 canvas = None
@@ -75,6 +76,7 @@ class Functions():
 
     def register_stock(self):
         self.ticker = self.ticker_entry.get().upper().strip()
+        self.old_ticker = self.ticker
         self.amount = self.amount_entry.get()
 
         if not self.ticker: #verificar se algum ticker foi digitado, impossibilitando a criação de registros sem ticker
@@ -85,19 +87,28 @@ class Functions():
         except ValueError:
             return
 
-        self.bd_connect()
         try:
-            self.cursor.execute("""insert into ticker_amount (ticker, amount)
-                values (?, ?)""", (self.ticker, self.amount))
-            self.connect.commit()
-        except Exception as e:
-            self.connect.rollback()
-            print(f'Erro ao inserir: {e}')
-        finally:
-            self.bd_disconnect()
+            data = yf.Ticker(f'{self.ticker}.SA')
+            if 'symbol' in data.info:
+                # O ticker é válido
+                self.bd_connect()
+                try:
+                    self.cursor.execute("""insert into ticker_amount (ticker, amount)
+                        values (?, ?)""", (self.ticker, self.amount))
+                    self.connect.commit()
+                except Exception as e:
+                    self.connect.rollback()
+                    print(f'Erro ao inserir: {e}')
+                finally:
+                    self.bd_disconnect()
 
-        self.show_table1()
-        self.clean_stocks_entries()
+                self.show_table1()
+                self.clean_stocks_entries()
+                self.five_days()
+            else:
+                print(f"Ticker inválido: {self.ticker}")
+        except Exception as e: #caso o nome digitado não seja uma ação
+            self.clean_stocks_entries()
 
 
     def show_table1(self):
@@ -147,113 +158,53 @@ class Functions():
             self.five_days()
 
 
-    @staticmethod
-    def two_decimal_r(value, tick_number):
-        return f'R$ {value:.2f}'
-
-
     def five_days(self):
-        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={self.old_ticker}.SA&apikey=5U3AFEJZP4689AQ8'
-        r = requests.get(url)
-        data = r.json()
-        today = dt.datetime.today()
-        last_5 = []
-        c = dt.timedelta(days=0)
-
-        for i in range(5):
-            dia = today - (dt.timedelta(days=i) + c)
-            dia_str = dia.strftime("%Y-%m-%d")
-
-            while dia_str not in data['Time Series (Daily)']:
-                dia -= dt.timedelta(days=1)
-                dia_str = dia.strftime("%Y-%m-%d")
-                c += dt.timedelta(days=1)
-
-            last_5.append(dia_str)
-
-        closes = [float(data['Time Series (Daily)'][date]['4. close']) for date in last_5]
-
-        canvas.get_tk_widget().destroy()
-
-        self.create_graph(last_5, closes, '5')
+        ticker = f'{self.old_ticker}.SA'
+        self.create_graph(ticker, "5d", "5 dias")
 
     
     def thirty_days(self):
-        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={self.old_ticker}.SA&outputsize=full&apikey=5U3AFEJZP4689AQ8'
-        r = requests.get(url)
-        data = r.json()
-        today = dt.datetime.today()
-        last_30 = []
-        c = dt.timedelta(days=0)
-
-        for i in range(30):
-            dia = today - (dt.timedelta(days=i) + c)
-            dia_str = dia.strftime("%Y-%m-%d")
-
-            while dia_str not in data['Time Series (Daily)']:
-                dia -= dt.timedelta(days=1)
-                dia_str = dia.strftime("%Y-%m-%d")
-                c += dt.timedelta(days=1)
-
-            last_30.append(dia_str)
-
-        closes = [float(data['Time Series (Daily)'][date]['4. close']) for date in last_30]
-
-        canvas.get_tk_widget().destroy()
-
-        self.create_graph(last_30, closes, '30')
+        ticker = f'{self.old_ticker}.SA'
+        self.create_graph(ticker, "30d", "30 dias")
 
 
     def year(self):
-        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={self.old_ticker}.SA&outputsize=full&apikey=5U3AFEJZP4689AQ8'
-        r = requests.get(url)
-        data = r.json()
-        today = dt.datetime.today()
-        first_day = dt.datetime(today.year, 1, 1)
-        diference = today - first_day
-        total_days = diference.days
-        last_year = []
-        c = dt.timedelta(days=0)
-
-        for i in range(total_days):
-            dia = today - (dt.timedelta(days=i) + c)
-            dia_str = dia.strftime("%Y-%m-%d")
-
-            while dia_str not in data['Time Series (Daily)']:
-                dia -= dt.timedelta(days=1)
-                dia_str = dia.strftime("%Y-%m-%d")
-                c += dt.timedelta(days=1)
-
-            last_year.append(dia_str)
-
-        closes = [float(data['Time Series (Daily)'][date]['4. close']) for date in last_year]
-
-        canvas.get_tk_widget().destroy()
-
-        self.create_graph(last_year, closes, 'year')
+        ticker = f'{self.old_ticker}.SA'
+        self.create_graph(ticker, "1y", "1 ano")
 
 
-    def create_graph(self, days='', prices='', option=''):
-        global canvas
+    def create_graph(self, ticker='', period='', title=''):
+        if ticker != '':
+            data = yf.Ticker(ticker)
+            df = data.history(period=period)
+
         fig, ax = plt.subplots()
         fig.subplots_adjust(left=0.1, right=0.99, top=1, bottom=0.07)
-        if days != '':
-            days.reverse()
-        if prices != '':
-            prices.reverse()
-            ax.yaxis.set_major_formatter(ticker.FuncFormatter(Functions.two_decimal_r))
             
-        if option == '5':
-            ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-        elif option == '30':
-            ax.xaxis.set_major_locator(plt.MaxNLocator(10))
-        elif option == 'year':
-            ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+        if period == '5d':
+            date_format = mdates.DateFormatter('%Y-%m-%d')
+            ax.xaxis.set_major_formatter(date_format)
+            ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+        elif period == '30d':
+            date_format = mdates.DateFormatter('%Y-%m-%d')
+            ax.xaxis.set_major_formatter(date_format)
+            ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+        elif period == '1y':
+            date_format = mdates.DateFormatter('%Y-%m')
+            ax.xaxis.set_major_formatter(date_format)
+            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
 
-        ax.plot(days, prices, color='k', linewidth=1, label='CIEL3.SA')
+        if ticker == '':
+            ax.plot(0, 0, color='k', linewidth=1)
+        else:
+            ax.plot(df['Close'], color='k', linewidth=1)
         ax.set_facecolor('#880808')
         ax.grid(True, linestyle='-', alpha=0.5)
 
+        def currency_formatter(x, pos):
+            return f"R${x:.2f}"
+
+        ax.yaxis.set_major_formatter(currency_formatter)
         
         canvas = FigureCanvasTkAgg(fig, master=self.frame_graph)
         canvas_widget = canvas.get_tk_widget()
@@ -286,6 +237,7 @@ class Functions():
         self.clean_stocks_entries()
         self.show_table1()
         self.show_eh_table()
+        self.old_ticker = None
     
 
     def update_info(self):
