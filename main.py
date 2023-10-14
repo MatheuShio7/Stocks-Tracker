@@ -144,7 +144,7 @@ class Functions():
 
             self.bd_disconnect()
 
-            self.five_days(self.old_ticker)
+            self.five_days()
 
 
     @staticmethod
@@ -152,8 +152,8 @@ class Functions():
         return f'R$ {value:.2f}'
 
 
-    def five_days(self, ticker):
-        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}.SA&outputsize=full&apikey=5U3AFEJZP4689AQ8'
+    def five_days(self):
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={self.old_ticker}.SA&apikey=5U3AFEJZP4689AQ8'
         r = requests.get(url)
         data = r.json()
         today = dt.datetime.today()
@@ -177,27 +177,84 @@ class Functions():
 
         self.create_graph(last_5, closes, '5')
 
+    
+    def thirty_days(self):
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={self.old_ticker}.SA&outputsize=full&apikey=5U3AFEJZP4689AQ8'
+        r = requests.get(url)
+        data = r.json()
+        today = dt.datetime.today()
+        last_30 = []
+        c = dt.timedelta(days=0)
+
+        for i in range(30):
+            dia = today - (dt.timedelta(days=i) + c)
+            dia_str = dia.strftime("%Y-%m-%d")
+
+            while dia_str not in data['Time Series (Daily)']:
+                dia -= dt.timedelta(days=1)
+                dia_str = dia.strftime("%Y-%m-%d")
+                c += dt.timedelta(days=1)
+
+            last_30.append(dia_str)
+
+        closes = [float(data['Time Series (Daily)'][date]['4. close']) for date in last_30]
+
+        canvas.get_tk_widget().destroy()
+
+        self.create_graph(last_30, closes, '30')
+
+
+    def year(self):
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={self.old_ticker}.SA&outputsize=full&apikey=5U3AFEJZP4689AQ8'
+        r = requests.get(url)
+        data = r.json()
+        today = dt.datetime.today()
+        first_day = dt.datetime(today.year, 1, 1)
+        diference = today - first_day
+        total_days = diference.days
+        last_year = []
+        c = dt.timedelta(days=0)
+
+        for i in range(total_days):
+            dia = today - (dt.timedelta(days=i) + c)
+            dia_str = dia.strftime("%Y-%m-%d")
+
+            while dia_str not in data['Time Series (Daily)']:
+                dia -= dt.timedelta(days=1)
+                dia_str = dia.strftime("%Y-%m-%d")
+                c += dt.timedelta(days=1)
+
+            last_year.append(dia_str)
+
+        closes = [float(data['Time Series (Daily)'][date]['4. close']) for date in last_year]
+
+        canvas.get_tk_widget().destroy()
+
+        self.create_graph(last_year, closes, 'year')
+
 
     def create_graph(self, days='', prices='', option=''):
         global canvas
         fig, ax = plt.subplots()
-        fig.subplots_adjust(left=0.09, right=0.99, top=1, bottom=0.07)
+        fig.subplots_adjust(left=0.1, right=0.99, top=1, bottom=0.07)
         if days != '':
             days.reverse()
         if prices != '':
             prices.reverse()
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(Functions.two_decimal_r))
+            
+        if option == '5':
+            ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+        elif option == '30':
+            ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+        elif option == 'year':
+            ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+
         ax.plot(days, prices, color='k', linewidth=1, label='CIEL3.SA')
         ax.set_facecolor('#880808')
         ax.grid(True, linestyle='-', alpha=0.5)
 
-        if option == '5':
-            ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-        elif option == '30':
-            ax.xaxis.set_major_locator(plt.MaxNLocator(15))
-        elif option == 'year':
-            ax.xaxis.set_major_locator(plt.MaxNLocator(15))
-
+        
         canvas = FigureCanvasTkAgg(fig, master=self.frame_graph)
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.place(rely=0.1, relx=0, relheight=0.9, relwidth=1)
@@ -482,13 +539,13 @@ class Aplication(Functions):
         self.update_earning_history_button.bind("<Enter>", lambda event, button=self.update_earning_history_button: button.config(bg='#92000a', fg='white'))
         self.update_earning_history_button.bind("<Leave>", lambda event, button=self.update_earning_history_button: button.config(bg='#800020', fg='white'))
         
-        self.five_days_button = Button(self.frame_graph_buttons, text='5 DIAS', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white')
+        self.five_days_button = Button(self.frame_graph_buttons, text='5 DIAS', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white', command=self.five_days)
         self.five_days_button.place(relx=0.15, rely=0.16, relheight=0.6, relwidth=0.1)
 
-        self.thirty_days_button = Button(self.frame_graph_buttons, text='30 DIAS', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white')
+        self.thirty_days_button = Button(self.frame_graph_buttons, text='30 DIAS', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white', command=self.thirty_days)
         self.thirty_days_button.place(relx=0.45, rely=0.16, relheight=0.6, relwidth=0.1,)
 
-        self.year_button = Button(self.frame_graph_buttons, text='1 ANO', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white')
+        self.year_button = Button(self.frame_graph_buttons, text='1 ANO', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white', command=self.year)
         self.year_button.place(relx=0.75, rely=0.16, relheight=0.6, relwidth=0.1)
 
 
