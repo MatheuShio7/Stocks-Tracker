@@ -6,8 +6,6 @@ import sqlite3
 import base64 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import datetime as dt
 import yfinance as yf
 import matplotlib.dates as mdates
 
@@ -21,25 +19,8 @@ class Functions():
         self.amount_entry.delete(0, END)
         self.amount_entry.insert(END, 0)
 
-        self.date_text.place_forget()
-        self.value_text.place_forget()
-        self.rs_text.place_forget()
-        self.date_entry.place_forget()
-        self.value_entry.place_forget()
-        self.new_earning_history_button.place_forget()
-        self.clean_earning_history_button.place_forget()
-        self.delete_earning_history_button.place_forget()
-        self.update_earning_history_button.place_forget()
-        self.frame_earning_history.place(relx=0.5, rely=0.615, relwidth=0.2, relheight=0.35)
-
-        self.show_eh_table()
         self.create_graph()
 
-
-    def clean_earnings_history_entries(self):
-        self.date_entry.config(state="normal")
-        self.date_entry.delete(0, END)
-        self.value_entry.delete(0, END)
 
     #função para se conectar ao banco de dados
     def bd_connect(self): 
@@ -53,23 +34,16 @@ class Functions():
 
 
     #função para criar as tabelas
-    def create_tables(self):
+    def create_table(self):
         self.bd_connect()
+
         self.cursor.execute("""
             create table if not exists ticker_amount (
                 ticker text not null check (length(ticker) <= 6),
                 amount int not null,
                 primary key (ticker)
             );""")
-
-        self.cursor.execute("""
-            create table if not exists earning_history (
-                ticker text no null,
-                date date not null,
-                value float not null,
-                foreign key (ticker) references ticker_amount (ticker)  
-            );""")
-        
+    
         self.connect.commit()  
         self.bd_disconnect()
 
@@ -121,56 +95,38 @@ class Functions():
 
 
     def on_double_click(self, event):
-        self.clean_earnings_history_entries()
         self.clean_stocks_entries()
         self.amount_entry.delete(0, END)
         selected_stock = self.ticker_amount_table.selection()
         
-        if selected_stock:  
-            self.frame_earning_history.place(relx=0.38, rely=0.615, relwidth=0.2, relheight=0.35)
+        if selected_stock:
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.old_ticker = col1
             self.ticker_entry.insert(END, col1)
             self.amount_entry.insert(END, col2)
-
-            self.date_text.place(relx=0.585,rely=0.635, relwidth=0.05, relheight=0.025)
-            self.date_entry.place(relx=0.6005,rely=0.660,relwidth=0.05,relheight=0.025)
-            self.value_text.place(relx=0.587,rely=0.7, relwidth=0.05, relheight=0.025)
-            self.rs_text.place(relx=0.582, rely=0.725, relwidth=0.05, relheight=0.025)
-            self.value_entry.place(relx=0.615,rely=0.725,relwidth=0.05,relheight=0.025)
-            self.new_earning_history_button.place(relx=0.587,rely=0.775,relwidth=0.05,relheight=0.03)
-            self.delete_earning_history_button.place(relx=0.647,rely=0.775,relwidth=0.05,relheight=0.03)
-            self.clean_earning_history_button.place(relx=0.707,rely=0.775,relwidth=0.05,relheight=0.03)
-            self.update_earning_history_button.place(relx=0.767,rely=0.775,relwidth=0.05,relheight=0.03) 
-
-            self.earning_history_table.delete(*self.earning_history_table.get_children())
-        
-            self.bd_connect()
-            selected_table = self.cursor.execute("""select ticker, date, value from earning_history where ticker = ? order by date desc""", (col1,))
-
-            for s in selected_table:
-                ticker, date, value = s
-                formatted_value = f'R$ {value:.2f}'
-                self.earning_history_table.insert('', END, values=(ticker, date, formatted_value))
-
-            self.bd_disconnect()
-
+            self.five_days_button.config(bg='#92000a')
             self.five_days()
 
 
     def five_days(self):
         ticker = f'{self.old_ticker}.SA'
         self.create_graph(ticker, "5d", "5 dias")
+        self.thirty_days_button.config(bg='black')
+        self.year_button.config(bg='black')
 
     
     def thirty_days(self):
         ticker = f'{self.old_ticker}.SA'
         self.create_graph(ticker, "30d", "30 dias")
+        self.five_days_button.config(bg='black')
+        self.year_button.config(bg='black')
 
 
     def year(self):
         ticker = f'{self.old_ticker}.SA'
         self.create_graph(ticker, "1y", "1 ano")
+        self.five_days_button.config(bg='black')
+        self.thirty_days_button.config(bg='black')
 
 
     def create_graph(self, ticker='', period='', title=''):
@@ -220,23 +176,12 @@ class Functions():
 
         self.bd_connect()
         self.cursor.execute(""" delete from ticker_amount where ticker = ?""", (self.ticker,))
-        self.cursor.execute(""" delete from earning_history where ticker = ?""", (self.ticker,))
         self.connect.commit()
 
-        self.date_text.place_forget()
-        self.value_text.place_forget()
-        self.rs_text.place_forget()
-        self.date_entry.place_forget()
-        self.value_entry.place_forget()
-        self.new_earning_history_button.place_forget()
-        self.clean_earning_history_button.place_forget()
-        self.delete_earning_history_button.place_forget()
-        self.update_earning_history_button.place_forget()
 
         self.bd_disconnect()
         self.clean_stocks_entries()
         self.show_table1()
-        self.show_eh_table()
         self.old_ticker = None
     
 
@@ -253,143 +198,12 @@ class Functions():
 
         self.connect.commit()
         self.bd_disconnect()
-        
-
-        self.bd_connect()
-        self.cursor.execute('''update earning_history set ticker = ? where ticker = ?''', (self.ticker, self.old_ticker))
-        self.connect.commit()
-        self.bd_disconnect()
 
         self.show_table1()
-        self.show_eh_table()
 
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
         self.amount_entry.insert(END, 0)
-
-
-    def add_eh(self):
-        self.ticker = self.ticker_entry.get()
-        self.date = self.date_entry.get()
-        self.value = self.value_entry.get().strip()
-
-        if not self.ticker:
-            return
-
-        if not self.value:
-            return  
-        
-        if ',' in self.value:
-            self.value = self.value.replace(',', '.')
-        
-        try:
-            float_value = float(self.value)
-        except ValueError:
-            return
-
-        self.bd_connect()
-        self.cursor.execute(""" insert into earning_history (ticker, date, value) values (?, ?, ?)""", (self.ticker, self.date, self.value))
-
-        self.connect.commit()
-        self.bd_disconnect()
-
-        self.earning_history_table.delete(*self.earning_history_table.get_children())  
-        self.bd_connect()
-        eh_table = self.cursor.execute(""" select ticker, date, value from earning_history where ticker = ? order by date desc; """, (self.ticker,))
-        for e in eh_table:
-            ticker, date, value = e
-            formatted_value = f'R$ {value:.2f}'
-            self.earning_history_table.insert('', END, values=(ticker, date, formatted_value))
-        self.bd_disconnect()
-        self.clean_earnings_history_entries()
-
-
-    def show_eh_table(self):
-        self.earning_history_table.delete(*self.earning_history_table.get_children())  
-        self.bd_connect()
-        eh_table = self.cursor.execute(""" select ticker, date, value from earning_history order by date desc; """)
-        for e in eh_table:
-            ticker, date, value = e
-            formatted_value = f'R$ {value:.2f}'
-            self.earning_history_table.insert('', END, values=(ticker, date, formatted_value))
-        self.bd_disconnect()
-
-
-    def double_click_eh(self, event):
-        self.new_earning_history_button.place_forget()
-        self.clean_earnings_history_entries()
-        self.date_entry.delete(0, END)
-        self.value_entry.delete(0, END)
-        selected_eh = self.earning_history_table.selection()
-
-        if not selected_eh:
-            return
-        
-        self.frame_earning_history.place(relx=0.38, rely=0.615, relwidth=0.2, relheight=0.35)
-
-        if selected_eh:
-            col1, col2, col3 = self.earning_history_table.item(selected_eh[0], 'values')
-            numeric_value = col3.replace('R$', '').strip()
-            self.value_entry.insert(END, numeric_value)
-            self.date_entry.insert(END, col2)
-
-        self.date_text.place(relx=0.585,rely=0.635, relwidth=0.05, relheight=0.025)
-        self.date_entry.place(relx=0.6005,rely=0.660,relwidth=0.05,relheight=0.025)
-        self.value_text.place(relx=0.587,rely=0.7, relwidth=0.05, relheight=0.025)
-        self.rs_text.place(relx=0.582, rely=0.725, relwidth=0.05, relheight=0.025)
-        self.value_entry.place(relx=0.615,rely=0.725,relwidth=0.05,relheight=0.025)
-        self.delete_earning_history_button.place(relx=0.587,rely=0.775,relwidth=0.05,relheight=0.03)
-        self.clean_earning_history_button.place(relx=0.647,rely=0.775,relwidth=0.05,relheight=0.03)
-        self.update_earning_history_button.place(relx=0.707,rely=0.775,relwidth=0.05,relheight=0.03)
-
-        self.old_date = self.date_entry.get()
-        self.old_value = self.value_entry.get()
-
-
-    def delete_eh(self):
-        self.data = self.date_entry.get()
-        self.value = self.value_entry.get()
-
-        if not self.data:
-            return
-        
-        if not self.value:
-            return
-
-        self.bd_connect()
-        self.cursor.execute("""DELETE FROM earning_history WHERE date = ? AND value = ?""", (self.data, self.value))
-        self.connect.commit()
-        self.bd_disconnect()
-        
-        self.clean_earnings_history_entries()
-        self.show_eh_table()
-
-
-    def update_eh(self):
-        self.data = self.date_entry.get()
-        self.value = self.value_entry.get()
-
-        if not self.data or not self.value:
-            return
-
-        self.bd_connect()
-        self.cursor.execute("""update earning_history set date = ?, value = ? where date = ? and value = ?""", (self.data, self.value, self.old_date, self.old_value))
-        self.connect.commit()
-        self.bd_disconnect()
-
-        self.show_eh_table()
-        self.clean_earnings_history_entries() 
-
-        self.date_text.place_forget()
-        self.value_text.place_forget()
-        self.rs_text.place_forget()
-        self.date_entry.place_forget()
-        self.value_entry.place_forget()
-        self.new_earning_history_button.place_forget()
-        self.clean_earning_history_button.place_forget()
-        self.delete_earning_history_button.place_forget()
-        self.update_earning_history_button.place_forget()
-        self.frame_earning_history.place(relx=0.5, rely=0.615, relwidth=0.2, relheight=0.35)
 
 
     def images_64(self):
@@ -409,12 +223,12 @@ class Aplication(Functions):
         self.texts()
         self.entries()
         self.ticker_aumont_table()
-        self.earning_history_table()
-        self.create_tables()
+        self.create_table()
         self.show_table1()
-        self.show_eh_table()
         self.create_graph()
         window.mainloop()
+
+        self.selected_button = None
     
 
     def screen_settings(self):
@@ -433,21 +247,21 @@ class Aplication(Functions):
 
         self.flower_img = ImageTk.PhotoImage(data=base64.b64decode(self.flower64))
         self.flower_label = Label(self.window, image=self.flower_img, highlightbackground='#880808', bg='#880808')
-        self.flower_label.place(relx=0.7, rely=0.66, relwidth=0.3, relheight=0.45)
+        self.flower_label.place(relx=0.735, rely=0.66, relwidth=0.3, relheight=0.45)
 
 
     def frames(self):
         self.frame_tabela_ticker_amount = Frame(self.window, highlightbackground='black', highlightthickness=4)
         self.frame_tabela_ticker_amount.place(relx=0.3, rely=0.05, relwidth=0.2, relheight=0.5)
 
-        self.frame_earning_history = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.frame_earning_history.place(relx=0.5, rely=0.615, relwidth=0.2, relheight=0.35)
-
         self.frame_graph = Frame(self.window, highlightbackground='black', highlightthickness=4)
         self.frame_graph.place(relx=0.537, rely=0.05, relwidth=0.43, relheight=0.5)
 
         self.frame_graph_buttons = Frame(self.frame_graph, background='black')
         self.frame_graph_buttons.place(relx=0.0, rely=0.0, relheight=0.1, relwidth=1)
+
+        self.dividends_graph = Frame(self.window, highlightbackground='black', highlightthickness=4)
+        self.dividends_graph.place(relx=0.39, rely=0.575, relwidth=0.38, relheight=0.4)
 
 
     def buttons(self):
@@ -472,33 +286,18 @@ class Aplication(Functions):
         self.update_button.bind("<Enter>", lambda event, button=self.update_button: button.config(bg='#92000a', fg='white'))
         self.update_button.bind("<Leave>", lambda event, button=self.update_button: button.config(bg='#800020', fg='white'))
         self.update_button.place(relx=0.23,rely=0.46,relwidth=0.05,relheight=0.03)
-
-        #botões do cadastro do histórico de proventos
-        self.new_earning_history_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command = self.add_eh, activebackground='#92000a', activeforeground='white')
-        self.new_earning_history_button.bind("<Enter>", lambda event, button=self.new_earning_history_button: button.config(bg='#92000a', fg='white'))
-        self.new_earning_history_button.bind("<Leave>", lambda event, button=self.new_earning_history_button: button.config(bg='#800020', fg='white'))
-
-        self.clean_earning_history_button = Button(self.window, text='Limpar', bg='#800020', fg='white', bd=3, 
-                                   font=('garamond', 11, 'bold'), command=self.clean_earnings_history_entries, activebackground='#92000a', activeforeground='white')
-        self.clean_earning_history_button.bind("<Enter>", lambda event, button=self.clean_earning_history_button: button.config(bg='#92000a', fg='white'))
-        self.clean_earning_history_button.bind("<Leave>", lambda event, button=self.clean_earning_history_button: button.config(bg='#800020', fg='white'))
-
-        self.delete_earning_history_button = Button(self.window, text='Deletar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.delete_eh, activebackground='#92000a', activeforeground='white')
-        self.delete_earning_history_button.bind("<Enter>", lambda event, button=self.delete_earning_history_button: button.config(bg='#92000a', fg='white'))
-        self.delete_earning_history_button.bind("<Leave>", lambda event, button=self.delete_earning_history_button: button.config(bg='#800020', fg='white'))
-
-        self.update_earning_history_button = Button(self.window, text='Atualizar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.update_eh, activebackground='#92000a', activeforeground='white')
-        self.update_earning_history_button.bind("<Enter>", lambda event, button=self.update_earning_history_button: button.config(bg='#92000a', fg='white'))
-        self.update_earning_history_button.bind("<Leave>", lambda event, button=self.update_earning_history_button: button.config(bg='#800020', fg='white'))
         
         self.five_days_button = Button(self.frame_graph_buttons, text='5 DIAS', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white', command=self.five_days)
+        self.five_days_button.bind("<1>", lambda event, button=self.five_days_button: button.config(bg='#92000a'))
         self.five_days_button.place(relx=0.15, rely=0.16, relheight=0.6, relwidth=0.1)
 
         self.thirty_days_button = Button(self.frame_graph_buttons, text='30 DIAS', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white', command=self.thirty_days)
+        self.thirty_days_button.bind("<1>", lambda event, button=self.thirty_days_button: button.config(bg='#92000a'))
         self.thirty_days_button.place(relx=0.45, rely=0.16, relheight=0.6, relwidth=0.1,)
 
         self.year_button = Button(self.frame_graph_buttons, text='1 ANO', bg='black', fg='white', bd=3, font=('garamond', 11, 'bold'), activebackground='#92000a', activeforeground='white', command=self.year)
-        self.year_button.place(relx=0.75, rely=0.16, relheight=0.6, relwidth=0.1)
+        self.year_button.bind("<1>", lambda event, button=self.year_button: button.config(bg='#92000a'))
+        self.year_button.place(relx=0.75, rely=0.16, relheight=0.6, relwidth=0.1)       
 
 
     def texts(self):
@@ -514,44 +313,13 @@ class Aplication(Functions):
 
         self.rs_text = Label(self.window, text='R$', bg='#880808',fg='white', font=('garamond', 13, 'bold'))
 
-        self.earning_history_text = Label(self.window, text='Histórico de Proventos', bg='#880808',fg='white', font=('garamond', 20, 'bold'))
-        self.earning_history_text.place(relx=0.5,rely=0.57, relwidth=0.2, relheight=0.025)
-
 
     def entries(self):
-        
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
         self.ticker_entry.place(relx=0.02,rely=0.335,relwidth=0.05,relheight=0.025)
 
         self.amount_entry = Spinbox(self.window, from_=0, to=100000000000000, font=('garamond', 13))
         self.amount_entry.place(relx=0.02,rely=0.4,relwidth=0.05,relheight=0.025)
-
-        self.date_entry = Entry(self.window, font=('garamond', 13))
-        self.date_entry.bind('<1>', self.pick_date)
-
-        self.value_entry = Entry(self.window, font=('garamond', 13))
-
-
-    def pick_date(self, event):
-        self.date_window = Toplevel()
-        self.date_window.grab_set()
-        self.date_window.title('Choose The Date')
-        self.date_window.geometry('250x220+590+370')
-        self.calendar = Calendar(self.date_window, selectmode='day', date_pattern='y/mm/dd')
-        self.calendar.place(x=0, y=0)
-        
-        self.submit_btn = Button(self.date_window, text='Selecionar', command=self.update_date)
-        self.submit_btn.place(x=94, y=190)
-        self.date_entry.config(fg='black')
-
-
-    def update_date(self):
-        selected_date = self.calendar.get_date()
-        self.date_entry.config(state="normal")
-        self.date_entry.delete(0, END)
-        self.date_entry.insert(0, selected_date)
-        self.date_entry.config(state="readonly")
-        self.date_window.destroy()
         
 
     def ticker_aumont_table(self):
@@ -573,27 +341,5 @@ class Aplication(Functions):
         self.scrool_ticker_amount_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
 
         self.ticker_amount_table.bind('<Double-1>', self.on_double_click)
-
-
-    def earning_history_table(self):
-        self.earning_history_table = ttk.Treeview(self.frame_earning_history, height=3, columns=('column1', 'column2', 'column3'))
-        self.earning_history_table.configure(height=5, show='headings')
-        self.earning_history_table.heading('#1', text='Ticker')
-        self.earning_history_table.heading('#2', text='Data')
-        self.earning_history_table.heading('#3', text='Valor')
-
-        self.earning_history_table.column('#1', width=10)
-        self.earning_history_table.column('#2', width=10)
-        self.earning_history_table.column('#3', width=10)
-
-        style = ttk.Style()
-        style.configure("Treeview.Heading", font=("garamond", 12, "bold"))
-        self.earning_history_table.place(relx=0,rely=0,relwidth=0.95,relheight=1)
-
-        self.scrool_earning_history_table = Scrollbar(self.frame_earning_history, orient='vertical', command=self.earning_history_table.yview)
-        self.earning_history_table.configure(yscroll=self.scrool_earning_history_table.set)
-        self.scrool_earning_history_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
-
-        self.earning_history_table.bind('<Double-1>', self.double_click_eh)
 
 Aplication()
