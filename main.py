@@ -20,6 +20,7 @@ class Functions():
         self.amount_entry.insert(END, 0)
 
         self.create_graph()
+        self.old_ticker = None
 
 
     #função para se conectar ao banco de dados
