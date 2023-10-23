@@ -8,9 +8,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import yfinance as yf
 import matplotlib.dates as mdates
+from datetime import datetime, timedelta
+import pytz
 
 window = Tk()
 canvas = None
+data = None
+fig = None
 
 class Functions():
     #função para limpar os campos
@@ -107,6 +111,7 @@ class Functions():
             self.amount_entry.insert(END, col2)
             self.five_days_button.config(bg='#92000a')
             self.five_days()
+            self.create_div_graph()
 
 
     def five_days(self):
@@ -131,6 +136,7 @@ class Functions():
 
 
     def create_graph(self, ticker='', period='', title=''):
+        global data
         if ticker != '':
             data = yf.Ticker(ticker)
             df = data.history(period=period)
@@ -139,15 +145,15 @@ class Functions():
         fig.subplots_adjust(left=0.1, right=0.99, top=1, bottom=0.07)
             
         if period == '5d':
-            date_format = mdates.DateFormatter('%Y-%m-%d')
+            date_format = mdates.DateFormatter('%d-%m-%Y')
             ax.xaxis.set_major_formatter(date_format)
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
         elif period == '30d':
-            date_format = mdates.DateFormatter('%Y-%m-%d')
+            date_format = mdates.DateFormatter('%d-%m-%Y')
             ax.xaxis.set_major_formatter(date_format)
             ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
         elif period == '1y':
-            date_format = mdates.DateFormatter('%Y-%m')
+            date_format = mdates.DateFormatter('%m-%Y')
             ax.xaxis.set_major_formatter(date_format)
             ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
 
@@ -170,6 +176,51 @@ class Functions():
 
         plt.close(fig)
 
+
+    def create_div_graph(self):
+        if self.old_ticker:
+            ticker = f'{self.old_ticker}.SA'
+            div_data = yf.Ticker(ticker)
+            dividends = div_data.dividends
+            dividends_last12 = dividends.tail(12)
+
+            if not dividends.empty:
+                fig2, ax2 = plt.subplots()
+                fig2.subplots_adjust(left=0.1, right=1, top=1, bottom=0.07)
+                bars = ax2.bar(dividends_last12.index, dividends_last12, width=7, color='black')
+                ax2.set_facecolor('#880808')
+                ax2.grid(True, linestyle='-', alpha=0.5)
+
+                date_format = mdates.DateFormatter('%m-%Y')
+                ax2.xaxis.set_major_formatter(date_format)
+
+                ax2.bar_label(bars, labels=dividends_last12.index.strftime('%m-%y'), label_type='edge', fontsize=8, rotation=40)
+
+                def currency_formatter(x, pos):
+                    return f"R${x:.2f}"
+
+                ax2.yaxis.set_major_formatter(currency_formatter)
+
+                canvas = FigureCanvasTkAgg(fig2, master=self.dividends_graph)
+                canvas_widget = canvas.get_tk_widget()
+                canvas_widget.place(rely=0, relx=0, relheight=1, relwidth=1)
+                canvas.draw()
+
+                plt.close(fig2)
+        else:
+            fig2, ax2 = plt.subplots()
+            fig2.subplots_adjust(left=0.1, right=0.99, top=1, bottom=0.07)
+            ax2.set_facecolor('#880808')
+            ax2.grid(True, linestyle='-', alpha=0.5)
+            ax2.bar([], [])
+
+            canvas = FigureCanvasTkAgg(fig2, master=self.dividends_graph)
+            canvas_widget = canvas.get_tk_widget()
+            canvas_widget.place(rely=0, relx=0, relheight=1, relwidth=1)
+            canvas.draw()
+
+            plt.close(fig2)
+            
 
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
@@ -216,6 +267,7 @@ class Functions():
 class Aplication(Functions):
     def __init__(self):
         self.window = window
+        self.old_ticker = None
         self.images_64()
         self.screen_settings()
         self.images()
@@ -227,6 +279,7 @@ class Aplication(Functions):
         self.create_table()
         self.show_table1()
         self.create_graph()
+        self.create_div_graph()
         window.mainloop()
 
         self.selected_button = None
