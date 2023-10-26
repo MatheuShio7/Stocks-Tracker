@@ -50,10 +50,10 @@ class Functions():
         self.old_ticker = self.ticker
         self.amount = self.amount_entry.get()
 
-        if not self.ticker: #verificar se algum ticker foi digitado, impossibilitando a criação de registros sem ticker
+        if not self.ticker:
             return
         
-        try: #verificar se o campo quantidade está recebendo um valor inteiro
+        try:
             int_amount = int(self.amount)
         except ValueError:
             return
@@ -61,7 +61,6 @@ class Functions():
         try:
             data = yf.Ticker(f'{self.ticker}.SA')
             if 'symbol' in data.info:
-                # O ticker é válido
                 self.bd_connect()
                 try:
                     self.cursor.execute("""insert into ticker_amount (ticker, amount)
@@ -78,8 +77,8 @@ class Functions():
                 self.five_days_button.config(bg='#92000a')
                 self.create_div_graph()
             else:
-                print(f"Ticker inválido: {self.ticker}")
-        except Exception as e: #caso o nome digitado não seja uma ação
+                print('Ticker inválido')
+        except Exception as e: 
             self.clean_stocks_entries()
 
     def show_table1(self):
