@@ -37,7 +37,7 @@ class Functions():
 
         self.cursor.execute("""
             create table if not exists ticker_amount (
-                ticker text not null check (length(ticker) <= 6),
+                ticker text not null,
                 amount int not null,
                 primary key (ticker)
             );""")
@@ -58,27 +58,34 @@ class Functions():
         except ValueError:
             return
 
-        try:
-            data = yf.Ticker(f'{self.ticker}.SA')
-            if 'symbol' in data.info:
-                self.bd_connect()
-                try:
+        if self.old_ticker != 'A':
+            try:
+                acao = yf.Ticker(f'{self.old_ticker}.SA')
+                informacoes = acao.info
+                if informacoes:
+                    print(f"Ação '{self.old_ticker}' existe.")
+                    self.bd_connect()
                     self.cursor.execute("""insert into ticker_amount (ticker, amount)
                         values (?, ?)""", (self.ticker, self.amount))
                     self.connect.commit()
-                except Exception as e:
-                    self.connect.rollback()
-                    print(f'Erro ao inserir: {e}')
-                finally:
-                    self.bd_disconnect()
-
+            except Exception:
+                try:
+                    acao = yf.Ticker(f'{self.old_ticker}')
+                    informacoes = acao.info
+                    if informacoes:
+                        print(f"Ação '{self.old_ticker}' existe.")
+                        self.bd_connect()
+                        self.cursor.execute("""insert into ticker_amount (ticker, amount)
+                            values (?, ?)""", (self.ticker, self.amount))
+                        self.connect.commit()
+                except Exception:
+                    print(f"Ação não existe.")
+            finally:
                 self.show_table1()
                 self.five_days()
                 self.five_days_button.config(bg='#92000a')
                 self.create_div_graph()
-            else:
-                print('Ticker inválido')
-        except Exception as e: 
+        else:
             self.clean_stocks_entries()
 
     def show_table1(self):
@@ -265,7 +272,15 @@ class Functions():
 
     def pt_language(self):
         self.language_line.place(relx=0.003,rely=0.039, relwidth=0.02, relheight=0.002)
-        self.buttons()
+
+        self.new_button.config(text='Adicionar')
+        self.clean_button.config(text='Limpar')
+        self.delete_button.config(text='Deletar')
+        self.update_button.config(text='Atualizar')
+        self.five_days_button.config(text='5 DIAS')
+        self.thirty_days_button.config(text='30 DIAS')
+        self.year_button.config(text='1 ANO')
+
         self.texts()
         self.ticker_amount_table.heading('#1', text='Ticker')
         self.ticker_amount_table.heading('#2', text='Quantidade')
