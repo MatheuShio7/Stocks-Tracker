@@ -15,7 +15,7 @@ canvas = None
 data = None
 fig = None
 
-class Functions():
+class Functions:
     def clean_stocks_entries(self): 
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
@@ -63,7 +63,8 @@ class Functions():
                 acao = yf.Ticker(f'{self.old_ticker}.SA')
                 informacoes = acao.info
                 if informacoes:
-                    print(f"Ação '{self.old_ticker}' existe.")
+                    print(f"Ação {self.old_ticker}.SA existe.")
+                    self.old_ticker = f'{self.old_ticker}.SA'
                     self.bd_connect()
                     self.cursor.execute("""insert into ticker_amount (ticker, amount)
                         values (?, ?)""", (self.ticker, self.amount))
@@ -73,7 +74,7 @@ class Functions():
                     acao = yf.Ticker(f'{self.old_ticker}')
                     informacoes = acao.info
                     if informacoes:
-                        print(f"Ação '{self.old_ticker}' existe.")
+                        print(f"Ação {self.old_ticker} existe.")
                         self.bd_connect()
                         self.cursor.execute("""insert into ticker_amount (ticker, amount)
                             values (?, ?)""", (self.ticker, self.amount))
@@ -104,6 +105,21 @@ class Functions():
         if selected_stock:
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.old_ticker = col1
+            try:
+                acao = yf.Ticker(f'{self.old_ticker}.SA')
+                informacoes = acao.info
+                if informacoes:
+                    print(f"Ação {self.old_ticker}.SA existe.")
+                    self.old_ticker = f'{self.old_ticker}.SA'
+            except Exception:
+                print('Ação não brasileira')
+                try:
+                    acao = yf.Ticker(f'{self.old_ticker}')
+                    informacoes = acao.info
+                    if informacoes:
+                        print(f"Ação {self.old_ticker} existe.")
+                except Exception:
+                    print(f"Ação não existe.")
             self.ticker_entry.insert(END, col1)
             self.amount_entry.insert(END, col2)
             self.five_days_button.config(bg='#92000a')
@@ -111,19 +127,19 @@ class Functions():
             self.create_div_graph()
 
     def five_days(self):
-        ticker = f'{self.old_ticker}.SA'
+        ticker = self.old_ticker
         self.create_graph(ticker, "5d", "5 dias")
         self.thirty_days_button.config(bg='black')
         self.year_button.config(bg='black')
     
     def thirty_days(self):
-        ticker = f'{self.old_ticker}.SA'
+        ticker = self.old_ticker
         self.create_graph(ticker, "30d", "30 dias")
         self.five_days_button.config(bg='black')
         self.year_button.config(bg='black')
 
     def year(self):
-        ticker = f'{self.old_ticker}.SA'
+        ticker = self.old_ticker
         self.create_graph(ticker, "1y", "1 ano")
         self.five_days_button.config(bg='black')
         self.thirty_days_button.config(bg='black')
@@ -151,9 +167,11 @@ class Functions():
             ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
 
         if ticker == '':
-            ax.plot(0, 0, color='k', linewidth=1)
+            texto = 'SELECIONE UMA AÇÃO'
+            ax.text(0.175, 0.5, texto, alpha=0.5, fontsize=30, color='white')
         else:
             ax.plot(df['Close'], color='k', linewidth=1)
+
         ax.set_facecolor('#880808')
         ax.grid(True, linestyle='-', alpha=0.5)
 
@@ -171,7 +189,7 @@ class Functions():
 
     def create_div_graph(self):
         if self.old_ticker:
-            ticker = f'{self.old_ticker}.SA'
+            ticker = self.old_ticker
             div_data = yf.Ticker(ticker)
             dividends = div_data.dividends
             dividends_last12 = dividends.tail(12)
