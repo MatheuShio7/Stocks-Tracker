@@ -549,6 +549,9 @@ class Aplication(Functions):
         self.amount_text = Label(self.window, text='Quantidade', bg='#880808', fg='white', font=('garamond', 13, 'bold'))
         self.amount_text.place(relx=0.018, rely=0.375, relwidth=0.05, relheight=0.025)
 
+        self.me = Label(self.window, text='@matheushio7', bg='#880808', fg='black', font=('garamond', 10, 'bold'))
+        self.me.place(relx=0.89, rely=0.975, relwidth=0.05, relheight=0.025)
+
     def entries(self):
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
         self.ticker_entry.place(relx=0.02, rely=0.335, relwidth=0.05, relheight=0.025)
