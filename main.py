@@ -63,32 +63,44 @@ class Functions:
 
         if self.old_ticker != 'A':
             try:
-                acao = yf.Ticker(f'{self.old_ticker}.SA')
-                informacoes = acao.info
-                if informacoes:
-                    print(f"Ação {self.old_ticker}.SA existe.")
-                    self.old_ticker = f'{self.old_ticker}.SA'
+                print('Verificar se é uma ação estrangeira.')
+                acao = yf.Ticker(f'{self.old_ticker}')
+                informations = acao.history(period='1d')
+
+                if not informations.empty:
+                    print('Ação estrangeira')
                     self.bd_connect()
                     self.cursor.execute("""insert into ticker_amount (ticker, amount)
                         values (?, ?)""", (self.ticker, self.amount))
                     self.connect.commit()
-            except Exception:
-                try:
-                    acao = yf.Ticker(f'{self.old_ticker}')
-                    informacoes = acao.info
-                    if informacoes:
-                        print(f"Ação {self.old_ticker} existe.")
+                    self.show_table1()
+                    self.five_days()
+                    self.five_days_button.config(bg='#92000a')
+                    self.create_div_graph()
+
+                else:
+                    print('Ação não estrangeira')
+                    acao = yf.Ticker(f'{self.old_ticker}.SA')
+                    informations = acao.history(period='1d')
+
+                    if not informations.empty:
+                        print('Ação com extensão .SA encontrada')
+                        self.old_ticker = f'{self.old_ticker}.SA'
                         self.bd_connect()
                         self.cursor.execute("""insert into ticker_amount (ticker, amount)
                             values (?, ?)""", (self.ticker, self.amount))
                         self.connect.commit()
-                except Exception:
-                    print(f"Ação não existe.")
-            finally:
-                self.show_table1()
-                self.five_days()
-                self.five_days_button.config(bg='#92000a')
-                self.create_div_graph()
+                        self.show_table1()
+                        self.five_days()
+                        self.five_days_button.config(bg='#92000a')
+                        self.create_div_graph()
+                
+                    else:
+                        print('Ação com extensão .SA também não encontrada')
+            
+            except Exception:
+                print('ERRO')
+
         else:
             self.clean_stocks_entries()
 
@@ -108,21 +120,28 @@ class Functions:
         if selected_stock:
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.old_ticker = col1
+
             try:
                 acao = yf.Ticker(f'{self.old_ticker}.SA')
                 informacoes = acao.info
+
                 if informacoes:
                     print(f"Ação {self.old_ticker}.SA existe.")
                     self.old_ticker = f'{self.old_ticker}.SA'
+
             except Exception:
                 print('Ação não brasileira')
+
                 try:
                     acao = yf.Ticker(f'{self.old_ticker}')
                     informacoes = acao.info
+
                     if informacoes:
                         print(f"Ação {self.old_ticker} existe.")
+    
                 except Exception:
                     print(f"Ação não existe.")
+
             self.ticker_entry.insert(END, col1)
             self.amount_entry.insert(END, col2)
             self.five_days_button.config(bg='#92000a')
