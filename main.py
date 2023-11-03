@@ -184,6 +184,16 @@ class Functions:
             data = yf.Ticker(ticker)
             df = data.history(period=period)
             ax.plot(df['Close'], color='k', linewidth=1)
+            
+            last_date = df.index[-1]
+            last_price = df['Close'].iloc[-1]
+            ax.plot(last_date, last_price, 'ko', markersize=3)  
+            ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+
+            first_date = df.index[0]
+            first_price = df['Close'].iloc[0]
+            ax.plot(first_date, first_price, 'ko', markersize=3)  
+            ax.annotate(f'R${first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
 
         if period == '5d':
             date_format = mdates.DateFormatter('%d-%m-%Y')
