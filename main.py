@@ -122,31 +122,32 @@ class Functions:
             self.old_ticker = col1
 
             try:
-                acao = yf.Ticker(f'{self.old_ticker}.SA')
-                informacoes = acao.info
+                print('Verificar se é uma ação estrangeira.')
+                acao = yf.Ticker(f'{self.old_ticker}')
+                informations2 = acao.history(period='1d')
 
-                if informacoes:
-                    print(f"Ação {self.old_ticker}.SA existe.")
-                    self.old_ticker = f'{self.old_ticker}.SA'
+                if not informations2.empty:
+                    self.ticker_entry.insert(END, col1)
+                    self.amount_entry.insert(END, col2)
+                    self.five_days_button.config(bg='#92000a')
+                    self.five_days()
+                    self.create_div_graph()
+
+                else: 
+                    print('Ação não estrangeira')
+                    acao = yf.Ticker(f'{self.old_ticker}.SA')
+                    informations2 = acao.history(period='1d')
+
+                    if not informations2.empty:
+                        self.old_ticker = f'{self.old_ticker}.SA'
+                        self.ticker_entry.insert(END, col1)
+                        self.amount_entry.insert(END, col2)
+                        self.five_days_button.config(bg='#92000a')
+                        self.five_days()
+                        self.create_div_graph()
 
             except Exception:
-                print('Ação não brasileira')
-
-                try:
-                    acao = yf.Ticker(f'{self.old_ticker}')
-                    informacoes = acao.info
-
-                    if informacoes:
-                        print(f"Ação {self.old_ticker} existe.")
-    
-                except Exception:
-                    print(f"Ação não existe.")
-
-            self.ticker_entry.insert(END, col1)
-            self.amount_entry.insert(END, col2)
-            self.five_days_button.config(bg='#92000a')
-            self.five_days()
-            self.create_div_graph()
+                    print(f"ERRO.")
 
     def five_days(self):
         if self.old_ticker:
@@ -200,7 +201,7 @@ class Functions:
         if ticker == '':  # se nenhuma ação estiver selecionada
             if self.language == 'pt':
                 text = 'SELECIONE OU REGISTRE \n           UMA AÇÃO'
-                ax.text(0.171, 0.4, text, alpha=0.5, fontsize=27, color='white')
+                ax.text(0.171, 0.41, text, alpha=0.5, fontsize=27, color='white')
             elif self.language == 'en':
                 text = 'SELECT OR REGISTER \n           A STOCK'
                 ax.text(0.215, 0.42, text, alpha=0.5, fontsize=27, color='white')
@@ -294,7 +295,7 @@ class Functions:
                 ax2.text(0.155, 0.4, text, alpha=0.5, fontsize=25, color='white')
             elif self.language == 'en':
                 text = 'SELECT OR REGISTER \n           A STOCK'
-                ax2.text(0.205, 0.4, text, alpha=0.5, fontsize=25, color='white')
+                ax2.text(0.205, 0.41, text, alpha=0.5, fontsize=25, color='white')
             else:
                 ax2.bar([], [])
             ax2.yaxis.set_major_formatter(currency_formatter)
