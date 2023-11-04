@@ -23,8 +23,7 @@ class Functions:
         site = BeautifulSoup(requisicao.text, 'html.parser')
 
         dolar = site.find('span', class_='SwHCTb')
-        dolar = float(dolar)
-        return dolar
+        return float(dolar['data-value'])
 
     def get_yuan(self):
         headers2 = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'}
@@ -32,8 +31,7 @@ class Functions:
         site2 = BeautifulSoup(requisicao2.text, 'html.parser')
 
         yuan = site2.find('span', class_='SwHCTb')
-        yuan = float(yuan)
-        return yuan
+        return float(yuan['data-value'])
 
     def clean_stocks_entries(self):
         self.ticker_entry.delete(0, END)
@@ -212,22 +210,20 @@ class Functions:
             data = yf.Ticker(ticker)
             df = data.history(period=period)
 
-            dolar = self.get_dolar()
-            yuan = self.get_yuan()
-
             if self.language == 'pt':
                 ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
             elif self.language == 'en':
+                dolar = self.get_dolar()
                 df['Close'] = df['Close'] / dolar
                 ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
             else:
+                yuan = self.get_yuan()
                 df['Close'] = df['Close'] / yuan
                 ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
             
             last_date = df.index[-1]
             last_price = df['Close'].iloc[-1]
-            ax.plot(last_date, last_price, 'ko', markersize=3)  
-            ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+            ax.plot(last_date, last_price, 'ko', markersize=3)
 
             if self.language == 'pt':
                 ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
@@ -286,7 +282,12 @@ class Functions:
         global dividends
 
         def currency_formatter(x, pos):
-            return f"R${x:.2f}"
+            if self.language == 'pt':
+                return f"R${x:.2f}"
+            elif self.language == 'en': 
+                return f"US{x:.2f}"
+            else: 
+                return f"{x:.2f}¥"
 
         if self.old_ticker:  # se tiver alguma alguma ação selecionada
             ticker = self.old_ticker
@@ -301,11 +302,18 @@ class Functions:
 
                 bar_width = 0.8
 
-                total_width = len(dividends_last12) * bar_width
-
                 positions = np.arange(len(dividends_last12))
 
-                ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                if self.language == 'pt':
+                    ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                elif self.language == 'en':
+                    dolar = self.get_dolar()
+                    dividends_last12 = dividends_last12 / dolar
+                    ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                else: 
+                    yuan = self.get_yuan()
+                    dividends_last12 = dividends_last12 / yuan
+                    ax2.bar(positions, dividends_last12, width=bar_width, color='black')
 
                 ax2.set_xticks(positions)
                 ax2.set_xticklabels([d.strftime('%m-%y') for d in dividends_last12.index])
@@ -428,8 +436,7 @@ class Functions:
             self.create_div_graph()
         else:
             self.create_graph(self.old_ticker, self.period)
-            if dividends.empty:  
-                self.create_div_graph()
+            self.create_div_graph()
 
         self.language_line.place(relx=0.003, rely=0.039, relwidth=0.02, relheight=0.002)
 
@@ -453,8 +460,7 @@ class Functions:
             self.create_div_graph()
         else:
             self.create_graph(self.old_ticker, self.period)
-            if dividends.empty:
-                self.create_div_graph()
+            self.create_div_graph()
 
         self.language_line.place(relx=0.028, rely=0.039, relwidth=0.02, relheight=0.002)
 
@@ -483,8 +489,7 @@ class Functions:
             self.create_div_graph()
         else:
             self.create_graph(self.old_ticker, self.period)
-            if dividends.empty: 
-                self.create_div_graph()
+            self.create_div_graph()
 
         self.language_line.place(relx=0.053, rely=0.039, relwidth=0.02, relheight=0.002)
 
