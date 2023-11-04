@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import matplotlib.dates as mdates
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
 
 window = Tk()
 canvas = None
@@ -15,6 +17,24 @@ data = None
 fig = None
 
 class Functions:
+    def get_dolar(self): 
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'}
+        requisicao = requests.get('https://www.google.com/search?q=dolar+real&oq=dolar+re', headers=headers)
+        site = BeautifulSoup(requisicao.text, 'html.parser')
+
+        dolar = site.find('span', class_='SwHCTb')
+        dolar = float(dolar)
+        return dolar
+
+    def get_yuan(self):
+        headers2 = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'}
+        requisicao2 = requests.get('https://www.google.com/search?q=yuan+para+real', headers=headers2)
+        site2 = BeautifulSoup(requisicao2.text, 'html.parser')
+
+        yuan = site2.find('span', class_='SwHCTb')
+        yuan = float(yuan)
+        return yuan
+
     def clean_stocks_entries(self):
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
@@ -150,6 +170,7 @@ class Functions:
                     print(f"ERRO.")
 
     def five_days(self):
+        self.period = '5d'
         if self.old_ticker:
             ticker = self.old_ticker
             self.create_graph(ticker, "5d")
@@ -158,6 +179,7 @@ class Functions:
         self.year_button.config(bg='black')
 
     def thirty_days(self):
+        self.period = '30d'
         if self.old_ticker:
             ticker = self.old_ticker
             self.create_graph(ticker, "30d")
@@ -166,6 +188,7 @@ class Functions:
         self.year_button.config(bg='black')
 
     def year(self):
+        self.period = '1y'
         if self.old_ticker:
             ticker = self.old_ticker
             self.create_graph(ticker, "1y")
@@ -175,7 +198,12 @@ class Functions:
 
     def create_graph(self, ticker='', period=''):
         def currency_formatter(x, pos):
-            return f"R${x:.2f}"
+            if self.language == 'pt':
+                return f"R${x:.2f}"
+            elif self.language == 'en': 
+                return f"US{x:.2f}"
+            else: 
+                return f"{x:.2f}¥"
 
         fig, ax = plt.subplots()
         fig.subplots_adjust(left=0.1, right=0.99, top=1, bottom=0.07)
@@ -183,17 +211,41 @@ class Functions:
         if ticker != '':  # se alguma ação estiver selecionada
             data = yf.Ticker(ticker)
             df = data.history(period=period)
-            ax.plot(df['Close'], color='k', linewidth=1)
+
+            dolar = self.get_dolar()
+            yuan = self.get_yuan()
+
+            if self.language == 'pt':
+                ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+            elif self.language == 'en':
+                df['Close'] = df['Close'] / dolar
+                ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+            else:
+                df['Close'] = df['Close'] / yuan
+                ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
             
             last_date = df.index[-1]
             last_price = df['Close'].iloc[-1]
             ax.plot(last_date, last_price, 'ko', markersize=3)  
             ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
 
+            if self.language == 'pt':
+                ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+            elif self.language == 'en':
+                ax.annotate(f'US{last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+            else: 
+                ax.annotate(f'{last_price:.2f}¥', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+
             first_date = df.index[0]
             first_price = df['Close'].iloc[0]
             ax.plot(first_date, first_price, 'ko', markersize=3)  
-            ax.annotate(f'R${first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+
+            if self.language == 'pt':
+                ax.annotate(f'R${first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+            elif self.language == 'en':
+                ax.annotate(f'US{first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+            else: 
+                ax.annotate(f'{first_price:.2f}¥', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
 
         if period == '5d':
             date_format = mdates.DateFormatter('%d-%m-%Y')
@@ -371,12 +423,12 @@ class Functions:
     def pt_language(self):
         self.language = 'pt'
 
-        if not self.old_ticker:  # se nenhuma ação estiver selecionada
+        if not self.old_ticker:
             self.create_graph()
             self.create_div_graph()
-
-        if self.old_ticker:  # se tiver ação, mas não tiver dividendos
-            if dividends.empty:
+        else:
+            self.create_graph(self.old_ticker, self.period)
+            if dividends.empty:  
                 self.create_div_graph()
 
         self.language_line.place(relx=0.003, rely=0.039, relwidth=0.02, relheight=0.002)
@@ -399,9 +451,9 @@ class Functions:
         if not self.old_ticker:
             self.create_graph()
             self.create_div_graph()
-
-        if self.old_ticker:
-            if dividends.empty:  # se não tiver dividendos
+        else:
+            self.create_graph(self.old_ticker, self.period)
+            if dividends.empty:
                 self.create_div_graph()
 
         self.language_line.place(relx=0.028, rely=0.039, relwidth=0.02, relheight=0.002)
@@ -429,9 +481,9 @@ class Functions:
         if not self.old_ticker:
             self.create_graph()
             self.create_div_graph()
-
-        if self.old_ticker:
-            if dividends.empty:  # se não tiver dividendos
+        else:
+            self.create_graph(self.old_ticker, self.period)
+            if dividends.empty: 
                 self.create_div_graph()
 
         self.language_line.place(relx=0.053, rely=0.039, relwidth=0.02, relheight=0.002)
