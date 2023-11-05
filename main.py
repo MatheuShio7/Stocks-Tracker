@@ -198,7 +198,7 @@ class Functions:
         self.five_days_button.config(bg='black')
         self.thirty_days_button.config(bg='black')
 
-    def create_graph(self, ticker='', period=''):
+    def create_graph(self, ticker='', period=''): 
         def currency_formatter(x, pos):
             if self.language == 'pt':
                 return f"R${x:.2f}"
@@ -427,17 +427,18 @@ class Functions:
             plt.close(fig2)
 
     def create_pie_graph(self):
-        vals = [7, 4, 5, 2, 4, 8, 1, 3]
-        labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        vals = [7, 4, 5, 2, 4, 8, 1, 3] #preço
+        labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] #ações
         explode=(0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03)
 
         fig3, ax3 = plt.subplots()  
-        wedges, texts, autotexts = ax3.pie(vals, labels=None, explode=explode, autopct='%1.1f%%')
+        wedges, texts, autotexts = ax3.pie(vals, labels=None, explode=explode, autopct='%1.1f%%', colors=['red'] * len(vals), shadow=True, 
+                                           shadow_color='black', shadow_alpha=0.5)
 
         for i, label in enumerate(labels):
             x, y = wedges[i].center
             theta = (wedges[i].theta2 + wedges[i].theta1) / 2
-            radius = 12 * explode[i] + 0.5  # Ajuste de posição
+            radius = 12 * explode[i] + 0.5  
             x += radius * np.cos(np.radians(theta))
             y += radius * np.sin(np.radians(theta))
             ax3.annotate(label, (x, y), fontsize=12, ha='center', va='center')
