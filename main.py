@@ -101,6 +101,7 @@ class Functions:
                     self.five_days()
                     self.five_days_button.config(bg='#92000a')
                     self.create_div_graph()
+                    self.create_pie_graph()
                 else:
                     print('Ação não estrangeira')
                     acao = yf.Ticker(f'{self.old_ticker}.SA')
@@ -117,6 +118,7 @@ class Functions:
                         self.five_days()
                         self.five_days_button.config(bg='#92000a')
                         self.create_div_graph()
+                        self.create_pie_graph()
                     else:
                         print('Ação com extensão .SA também não encontrada')
             
@@ -427,30 +429,76 @@ class Functions:
             plt.close(fig2)
 
     def create_pie_graph(self):
-        vals = [7, 4, 5, 2, 4, 8, 1, 3] #preço
-        labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] #ações
-        explode=(0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03)
+        self.bd_connect()
+        self.cursor.execute("SELECT COUNT(*) FROM ticker_amount")
+        count = self.cursor.fetchone()[0]
+        self.bd_disconnect()
 
-        fig3, ax3 = plt.subplots()  
-        wedges, texts, autotexts = ax3.pie(vals, labels=None, explode=explode, autopct='%1.1f%%', colors=['red'] * len(vals), shadow=True, 
-                                           shadow_color='black', shadow_alpha=0.5)
+        if count != 0:
+            self.bd_connect()
+            self.cursor.execute("SELECT ticker FROM ticker_amount ORDER BY rowid")
+            tickers = [record[0] for record in self.cursor.fetchall()]
+            self.bd_disconnect()
 
-        for i, label in enumerate(labels):
-            x, y = wedges[i].center
-            theta = (wedges[i].theta2 + wedges[i].theta1) / 2
-            radius = 12 * explode[i] + 0.5  
-            x += radius * np.cos(np.radians(theta))
-            y += radius * np.sin(np.radians(theta))
-            ax3.annotate(label, (x, y), fontsize=12, ha='center', va='center')
+            self.bd_connect()
+            self.cursor.execute("SELECT amount FROM ticker_amount")
+            amounts = [record[0] for record in self.cursor.fetchall()]
+            self.bd_disconnect()
 
-        fig3.patch.set_facecolor('#880808')
+            print(tickers)
+            print(amounts)
 
-        canvas = FigureCanvasTkAgg(fig3, master=self.pie_graph)
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.place(rely=0, relx=0.3, relheight=1, relwidth=0.7)
-        canvas.draw()
+            stock_list = tickers #ações
+            amount_list = amounts #quantidade
+            prices_list = []
+            
+            for stock in stock_list:
+                try: 
+                    data = yf.Ticker(stock)
+                    info = data.history(period='1d')
 
-        plt.close(fig3)
+                    if not info.empty:
+                        price = info['Close'].values[-1]
+                        price = round(price, 2)
+                        prices_list.append(price)
+                    else:
+                        data = yf.Ticker(f'{stock}.SA')
+                        info = data.history(period='1d')
+
+                        if not info.empty:
+                            price = info['Close'].values[-1]
+                            price = round(price, 2)
+                            prices_list.append(price)
+                        else:
+                            print('Erro ao procurar o preço das ações.')
+
+                except Exception:
+                    print('Erro no gráfico de pedaço')
+
+            print(prices_list)
+
+            price_amount_list = []
+
+            for p, a in zip(prices_list, amount_list):
+                price_amount_list.append(p * a)   
+
+            text = '\n'.join(stock_list)
+            self.ticker_price.config(text=text, fg='white', font=('garamond', 13, 'bold'))          
+
+            n = len(stock_list)
+            explode = tuple(0.015 * n for _ in range(n))
+
+            fig3, ax3 = plt.subplots()  
+            ax3.pie(price_amount_list, labels=stock_list, explode=explode, autopct='%1.1f%%', colors=['red'] * len(price_amount_list), shadow=True)
+
+            fig3.patch.set_facecolor('#880808')
+
+            canvas = FigureCanvasTkAgg(fig3, master=self.pie_graph)
+            canvas_widget = canvas.get_tk_widget()
+            canvas_widget.place(rely=0, relx=0.3, relheight=1, relwidth=0.7)
+            canvas.draw()
+
+            plt.close(fig3)
 
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
@@ -465,6 +513,7 @@ class Functions:
             self.bd_disconnect()
             self.clean_stocks_entries()
             self.show_table1()
+            self.create_pie_graph()
             self.old_ticker = None
             self.create_div_graph()
             self.five_days_button.config(bg='black')
@@ -490,6 +539,7 @@ class Functions:
         self.bd_disconnect()
 
         self.show_table1()
+        self.create_pie_graph()
 
     def images_64(self):
         self.china = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAARABkDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCKZ9POl2a2Uc/9ph8yEnIOemOOeg/PvWfdY83+HO0bsZ645znvmoaWvj4U+XqfrsYcvUSiiirLCiiigAooooA//9k='
@@ -651,7 +701,7 @@ class Aplication(Functions):
         self.separation_line2 = Frame(self.window, background='black')
         self.separation_line2.place(relx=0.05, rely=0.005, relwidth=0.0008, relheight=0.04)
 
-        self.pie_graph = Frame(self.window, highlightbackground='black', highlightthickness=4)
+        self.pie_graph = Frame(self.window, highlightbackground='black', highlightthickness=4, bg='#880808')
         self.pie_graph.place(relx=0.17, rely=0.575, relwidth=0.35, relheight=0.4)
 
     def buttons(self):
@@ -714,8 +764,11 @@ class Aplication(Functions):
         self.amount_text = Label(self.window, text='Quantidade', bg='#880808', fg='white', font=('garamond', 13, 'bold'))
         self.amount_text.place(relx=0.018, rely=0.375, relwidth=0.05, relheight=0.025)
 
-        '''self.me = Label(self.window, text='@matheushio7', bg='#880808', fg='black', font=('garamond', 10, 'bold'))
-        self.me.place(relx=0.89, rely=0.975, relwidth=0.05, relheight=0.025)'''
+        self.ticker_price = Label(self.pie_graph, bg='blue')
+        self.ticker_price.place(relx=0, rely=0, relwidth=0.3, relheight=1)
+
+        self.me = Label(self.window, text='@matheushio7', bg='#880808', fg='black', font=('garamond', 10, 'bold'))
+        self.me.place(relx=0, rely=0.977, relwidth=0.05, relheight=0.025)
 
     def entries(self):
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
