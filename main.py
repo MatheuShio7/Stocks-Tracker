@@ -33,6 +33,14 @@ class Functions:
         yuan = site2.find('span', class_='SwHCTb')
         return float(yuan['data-value'])
 
+    def get_yu_dol(self):
+        headers2 = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'}
+        requisicao2 = requests.get('https://www.google.com/search?q=dolar+para+yuan&oq=dolar+para+yuan', headers=headers2)
+        site2 = BeautifulSoup(requisicao2.text, 'html.parser')
+
+        yu_dol = site2.find('span', class_='SwHCTb')
+        return float(yu_dol['data-value'])
+
     def clean_stocks_entries(self):
         self.ticker_entry.delete(0, END)
         self.amount_entry.delete(0, END)
@@ -55,14 +63,12 @@ class Functions:
 
     def create_table(self):
         self.bd_connect()
-
         self.cursor.execute("""
             create table if not exists ticker_amount (
                 ticker text not null,
                 amount int not null,
                 primary key (ticker)
             );""")
-
         self.connect.commit()
         self.bd_disconnect()
 
@@ -95,7 +101,6 @@ class Functions:
                     self.five_days()
                     self.five_days_button.config(bg='#92000a')
                     self.create_div_graph()
-
                 else:
                     print('Ação não estrangeira')
                     acao = yf.Ticker(f'{self.old_ticker}.SA')
@@ -112,7 +117,6 @@ class Functions:
                         self.five_days()
                         self.five_days_button.config(bg='#92000a')
                         self.create_div_graph()
-                
                     else:
                         print('Ação com extensão .SA também não encontrada')
             
@@ -124,6 +128,7 @@ class Functions:
 
     def show_table1(self):
         self.ticker_amount_table.delete(*self.ticker_amount_table.get_children())
+
         self.bd_connect()
         table1 = self.cursor.execute(""" select ticker, amount from ticker_amount; """)
         for i in table1:
@@ -139,7 +144,7 @@ class Functions:
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.old_ticker = col1
 
-            try:
+            try: 
                 print('Verificar se é uma ação estrangeira.')
                 acao = yf.Ticker(f'{self.old_ticker}')
                 informations2 = acao.history(period='1d')
@@ -150,7 +155,6 @@ class Functions:
                     self.five_days_button.config(bg='#92000a')
                     self.five_days()
                     self.create_div_graph()
-
                 else: 
                     print('Ação não estrangeira')
                     acao = yf.Ticker(f'{self.old_ticker}.SA')
@@ -209,39 +213,73 @@ class Functions:
         if ticker != '':  # se alguma ação estiver selecionada
             data = yf.Ticker(ticker)
             df = data.history(period=period)
-
-            if self.language == 'pt':
-                ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
-            elif self.language == 'en':
-                dolar = self.get_dolar()
-                df['Close'] = df['Close'] / dolar
-                ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
-            else:
-                yuan = self.get_yuan()
-                df['Close'] = df['Close'] / yuan
-                ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
             
-            last_date = df.index[-1]
-            last_price = df['Close'].iloc[-1]
-            ax.plot(last_date, last_price, 'ko', markersize=3)
+            if self.old_ticker.endswith('SA'):
+                if self.language == 'pt':
+                    ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+                elif self.language == 'en':
+                    dolar = self.get_dolar()
+                    df['Close'] = df['Close'] / dolar
+                    ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+                else:
+                    yuan = self.get_yuan()
+                    df['Close'] = df['Close'] / yuan
+                    ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+                
+                last_date = df.index[-1]
+                last_price = df['Close'].iloc[-1]
+                ax.plot(last_date, last_price, 'ko', markersize=3)
 
-            if self.language == 'pt':
-                ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
-            elif self.language == 'en':
-                ax.annotate(f'US{last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
-            else: 
-                ax.annotate(f'{last_price:.2f}¥', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+                if self.language == 'pt':
+                    ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+                elif self.language == 'en':
+                    ax.annotate(f'US{last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+                else: 
+                    ax.annotate(f'{last_price:.2f}¥', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
 
-            first_date = df.index[0]
-            first_price = df['Close'].iloc[0]
-            ax.plot(first_date, first_price, 'ko', markersize=3)  
+                first_date = df.index[0]
+                first_price = df['Close'].iloc[0]
+                ax.plot(first_date, first_price, 'ko', markersize=3)  
 
-            if self.language == 'pt':
-                ax.annotate(f'R${first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
-            elif self.language == 'en':
-                ax.annotate(f'US{first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
-            else: 
-                ax.annotate(f'{first_price:.2f}¥', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+                if self.language == 'pt':
+                    ax.annotate(f'R${first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+                elif self.language == 'en':
+                    ax.annotate(f'US{first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+                else: 
+                    ax.annotate(f'{first_price:.2f}¥', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+            else:
+                if self.language == 'pt':
+                    dolar = self.get_dolar()
+                    df['Close'] = df['Close'] * dolar
+                    ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+                elif self.language == 'en':
+                    ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+                else:
+                    yu_dol = self.get_yu_dol()
+                    df['Close'] = df['Close'] * yu_dol
+                    ax.plot(df.index, df['Close'].values, color='k', linewidth=1)
+                
+                last_date = df.index[-1]
+                last_price = df['Close'].iloc[-1]
+                ax.plot(last_date, last_price, 'ko', markersize=3)
+
+                if self.language == 'pt':
+                    ax.annotate(f'R${last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+                elif self.language == 'en':
+                    ax.annotate(f'US{last_price:.2f}', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+                else: 
+                    ax.annotate(f'{last_price:.2f}¥', (last_date, last_price), textcoords="offset points", xytext=(0,5), ha='center')
+
+                first_date = df.index[0]
+                first_price = df['Close'].iloc[0]
+                ax.plot(first_date, first_price, 'ko', markersize=3)  
+
+                if self.language == 'pt':
+                    ax.annotate(f'R${first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+                elif self.language == 'en':
+                    ax.annotate(f'US{first_price:.2f}', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
+                else: 
+                    ax.annotate(f'{first_price:.2f}¥', (first_date, first_price), textcoords="offset points", xytext=(0,5), ha='center')
 
         if period == '5d':
             date_format = mdates.DateFormatter('%d-%m-%Y')
@@ -299,21 +337,32 @@ class Functions:
                 fig2, ax2 = plt.subplots()
                 fig2.subplots_adjust(left=0.1, right=1, top=1, bottom=0.07)
                 fig2.subplots_adjust(left=0.1, right=1, top=1, bottom=0.07)
-
                 bar_width = 0.8
 
                 positions = np.arange(len(dividends_last12))
 
-                if self.language == 'pt':
-                    ax2.bar(positions, dividends_last12, width=bar_width, color='black')
-                elif self.language == 'en':
-                    dolar = self.get_dolar()
-                    dividends_last12 = dividends_last12 / dolar
-                    ax2.bar(positions, dividends_last12, width=bar_width, color='black')
-                else: 
-                    yuan = self.get_yuan()
-                    dividends_last12 = dividends_last12 / yuan
-                    ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                if self.old_ticker.endswith('.SA'):
+                    if self.language == 'pt':
+                        ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                    elif self.language == 'en':
+                        dolar = self.get_dolar()
+                        dividends_last12 = dividends_last12 / dolar
+                        ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                    else: 
+                        yuan = self.get_yuan()
+                        dividends_last12 = dividends_last12 / yuan
+                        ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                else:
+                    if self.language == 'pt':
+                        dolar = self.get_dolar()
+                        dividends_last12 = dividends_last12 * dolar
+                        ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                    elif self.language == 'en':
+                        ax2.bar(positions, dividends_last12, width=bar_width, color='black')
+                    else: 
+                        yu_dol = self.get_yu_dol()
+                        dividends_last12 = dividends_last12 * yu_dol
+                        ax2.bar(positions, dividends_last12, width=bar_width, color='black')
 
                 ax2.set_xticks(positions)
                 ax2.set_xticklabels([d.strftime('%m-%y') for d in dividends_last12.index])
@@ -377,6 +426,31 @@ class Functions:
 
             plt.close(fig2)
 
+    def create_pie_graph(self):
+        vals = [7, 4, 5, 2, 4, 8, 1, 3]
+        labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        explode=(0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03)
+
+        fig3, ax3 = plt.subplots()  
+        wedges, texts, autotexts = ax3.pie(vals, labels=None, explode=explode, autopct='%1.1f%%')
+
+        for i, label in enumerate(labels):
+            x, y = wedges[i].center
+            theta = (wedges[i].theta2 + wedges[i].theta1) / 2
+            radius = 12 * explode[i] + 0.5  # Ajuste de posição
+            x += radius * np.cos(np.radians(theta))
+            y += radius * np.sin(np.radians(theta))
+            ax3.annotate(label, (x, y), fontsize=12, ha='center', va='center')
+
+        fig3.patch.set_facecolor('#880808')
+
+        canvas = FigureCanvasTkAgg(fig3, master=self.pie_graph)
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.place(rely=0, relx=0.3, relheight=1, relwidth=0.7)
+        canvas.draw()
+
+        plt.close(fig3)
+
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
 
@@ -404,18 +478,17 @@ class Functions:
             return
 
         self.bd_connect()
-
-        self.cursor.execute(""" update ticker_amount set ticker = ?, amount = ? where ticker = ?""",
-                            (self.ticker, self.amount, self.old_ticker))
-
+        if self.old_ticker.endswith('.SA'):
+            ticker_no_sa = self.old_ticker[:-3]
+            self.cursor.execute(""" update ticker_amount set ticker = ?, amount = ? where ticker = ?""",
+                                (self.ticker, self.amount, ticker_no_sa))
+        else:
+            self.cursor.execute(""" update ticker_amount set ticker = ?, amount = ? where ticker = ?""",
+                                (self.ticker, self.amount, self.old_ticker))
         self.connect.commit()
         self.bd_disconnect()
 
         self.show_table1()
-
-        self.ticker_entry.delete(0, END)
-        self.amount_entry.delete(0, END)
-        self.amount_entry.insert(END, 0)
 
     def images_64(self):
         self.china = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAARABkDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCKZ9POl2a2Uc/9ph8yEnIOemOOeg/PvWfdY83+HO0bsZ645znvmoaWvj4U+XqfrsYcvUSiiirLCiiigAooooA//9k='
@@ -527,6 +600,7 @@ class Aplication(Functions):
         self.show_table1()
         self.create_graph()
         self.create_div_graph()
+        self.create_pie_graph()
         window.mainloop()
 
         self.selected_button = None
@@ -544,9 +618,9 @@ class Aplication(Functions):
         self.spider_label = Label(self.window, image=self.spider_img, highlightbackground='#880808')
         self.spider_label.place(relx=0.105, rely=0.15, relwidth=0.3, relheight=0.7)
 
-        self.flower_img = ImageTk.PhotoImage(data=base64.b64decode(self.flower64))
+        '''self.flower_img = ImageTk.PhotoImage(data=base64.b64decode(self.flower64))
         self.flower_label = Label(self.window, image=self.flower_img, highlightbackground='#880808', bg='#880808')
-        self.flower_label.place(relx=0.735, rely=0.66, relwidth=0.3, relheight=0.45)
+        self.flower_label.place(relx=0.735, rely=0.66, relwidth=0.3, relheight=0.45)'''
 
         self.pt_br_img = ImageTk.PhotoImage(data=base64.b64decode(self.pt_br))
 
@@ -565,7 +639,7 @@ class Aplication(Functions):
         self.frame_graph_buttons.place(relx=0.0, rely=0.0, relheight=0.1, relwidth=1)
 
         self.dividends_graph = Frame(self.window, highlightbackground='black', highlightthickness=4)
-        self.dividends_graph.place(relx=0.39, rely=0.575, relwidth=0.38, relheight=0.4)
+        self.dividends_graph.place(relx=0.561, rely=0.575, relwidth=0.38, relheight=0.4)
 
         self.language_line = Frame(self.window, highlightbackground='white')
         self.language_line.place(relx=0.003, rely=0.039, relwidth=0.02, relheight=0.002)
@@ -575,6 +649,9 @@ class Aplication(Functions):
 
         self.separation_line2 = Frame(self.window, background='black')
         self.separation_line2.place(relx=0.05, rely=0.005, relwidth=0.0008, relheight=0.04)
+
+        self.pie_graph = Frame(self.window, highlightbackground='black', highlightthickness=4)
+        self.pie_graph.place(relx=0.17, rely=0.575, relwidth=0.35, relheight=0.4)
 
     def buttons(self):
         self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.register_stock,     activebackground='#92000a',activeforeground='white')
@@ -636,8 +713,8 @@ class Aplication(Functions):
         self.amount_text = Label(self.window, text='Quantidade', bg='#880808', fg='white', font=('garamond', 13, 'bold'))
         self.amount_text.place(relx=0.018, rely=0.375, relwidth=0.05, relheight=0.025)
 
-        self.me = Label(self.window, text='@matheushio7', bg='#880808', fg='black', font=('garamond', 10, 'bold'))
-        self.me.place(relx=0.89, rely=0.975, relwidth=0.05, relheight=0.025)
+        '''self.me = Label(self.window, text='@matheushio7', bg='#880808', fg='black', font=('garamond', 10, 'bold'))
+        self.me.place(relx=0.89, rely=0.975, relwidth=0.05, relheight=0.025)'''
 
     def entries(self):
         self.ticker_entry = Entry(self.window, font=('garamond', 13))
