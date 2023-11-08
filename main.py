@@ -573,6 +573,19 @@ class Functions:
             canvas.draw()
 
             plt.close(fig3)
+        
+        else:
+            fig3, ax3 = plt.subplots()  
+            ax3.pie([1], colors=['red'] * len([1]), shadow=True)
+
+            fig3.patch.set_facecolor('#880808')
+
+            canvas = FigureCanvasTkAgg(fig3, master=self.pie_graph)
+            canvas_widget = canvas.get_tk_widget()
+            canvas_widget.place(rely=0, relx=0.5, relheight=1, relwidth=0.5)
+            canvas.draw()
+
+            plt.close(fig3)
 
     def delete_stock(self):
         self.ticker = self.ticker_entry.get().upper()
@@ -732,6 +745,7 @@ class Aplication(Functions):
         self.language = 'pt'
         self.images_64()
         self.screen_settings()
+        self.create_table()
         self.images()
         self.frames()
         self.buttons()
