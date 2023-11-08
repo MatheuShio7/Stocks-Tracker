@@ -87,40 +87,36 @@ class Functions:
 
         if self.old_ticker != 'A':
             try:
-                print('Verificar se é uma ação estrangeira.')
                 acao = yf.Ticker(f'{self.old_ticker}')
                 informations = acao.history(period='1d')
 
                 if not informations.empty:
-                    print('Ação estrangeira')
                     self.bd_connect()
                     self.cursor.execute("""insert into ticker_amount (ticker, amount)
                         values (?, ?)""", (self.ticker, self.amount))
                     self.connect.commit()
                     self.show_table1()
+                    self.show_table2()
                     self.five_days()
                     self.five_days_button.config(bg='#92000a')
                     self.create_div_graph()
                     self.create_pie_graph()
                 else:
-                    print('Ação não estrangeira')
                     acao = yf.Ticker(f'{self.old_ticker}.SA')
                     informations = acao.history(period='1d')
 
                     if not informations.empty:
-                        print('Ação com extensão .SA encontrada')
                         self.old_ticker = f'{self.old_ticker}.SA'
                         self.bd_connect()
                         self.cursor.execute("""insert into ticker_amount (ticker, amount)
                             values (?, ?)""", (self.ticker, self.amount))
                         self.connect.commit()
                         self.show_table1()
+                        self.show_table2()
                         self.five_days()
                         self.five_days_button.config(bg='#92000a')
                         self.create_div_graph()
                         self.create_pie_graph()
-                    else:
-                        print('Ação com extensão .SA também não encontrada')
             
             except Exception:
                 print('ERRO')
@@ -137,6 +133,95 @@ class Functions:
             self.ticker_amount_table.insert('', END, values=i)
         self.bd_disconnect()
 
+    def show_table2(self):
+        self.ticker_value_table.delete(*self.ticker_value_table.get_children())
+        dolar = self.get_dolar()
+        yuan = self.get_yuan()
+        yu_dol = self.get_yu_dol()
+
+        self.bd_connect()
+        table2 = self.cursor.execute(""" select ticker, amount from ticker_amount; """)
+        if self.language == 'pt':
+            for e in table2:
+                try: 
+                    data = yf.Ticker(e[0])
+                    info = data.history(period='1d')
+
+                    if not info.empty:
+                        price = info['Close'].values[-1]
+                        price = round(price, 2)
+
+                        valor_formatado = f'R$ {(float(e[1]) * price) * dolar:.2f}'
+                        self.ticker_value_table.insert('', END, values=(e[0], valor_formatado))
+
+                    else:
+                        data = yf.Ticker(f'{e[0]}.SA')
+                        info = data.history(period='1d')
+
+                        if not info.empty:
+                            price = info['Close'].values[-1]
+                            price = round(price, 2)
+                            
+                            valor_formatado = f'R$ {float(e[1]) * price:.2f}'
+                            self.ticker_value_table.insert('', END, values=(e[0], valor_formatado))
+
+                except Exception:
+                    print('Erro na tabela de ticker e valor total investido')
+                    
+        elif self.language == 'en':
+            for e in table2:
+                try: 
+                    data = yf.Ticker(e[0])
+                    info = data.history(period='1d')
+
+                    if not info.empty:
+                        price = info['Close'].values[-1]
+                        price = round(price, 2)
+
+                        valor_formatado = f'US {float(e[1]) * price:.2f}'
+                        self.ticker_value_table.insert('', END, values=(e[0], valor_formatado))
+
+                    else:
+                        data = yf.Ticker(f'{e[0]}.SA')
+                        info = data.history(period='1d')
+
+                        if not info.empty:
+                            price = info['Close'].values[-1]
+                            price = round(price, 2)
+                            
+                            valor_formatado = f'US {(float(e[1]) * price) / dolar:.2f}'
+                            self.ticker_value_table.insert('', END, values=(e[0], valor_formatado))
+
+                except Exception:
+                    print('Erro na tabela de ticker e valor total investido')
+        else:
+            for e in table2:
+                try: 
+                    data = yf.Ticker(e[0])
+                    info = data.history(period='1d')
+
+                    if not info.empty:
+                        price = info['Close'].values[-1]
+                        price = round(price, 2)
+
+                        valor_formatado = f'{(float(e[1]) * price) * yu_dol:.2f}¥'
+                        self.ticker_value_table.insert('', END, values=(e[0], valor_formatado))
+
+                    else:
+                        data = yf.Ticker(f'{e[0]}.SA')
+                        info = data.history(period='1d')
+
+                        if not info.empty:
+                            price = info['Close'].values[-1]
+                            price = round(price, 2)
+                            
+                            valor_formatado = f'{(float(e[1]) * price) / yuan:.2f}¥'
+                            self.ticker_value_table.insert('', END, values=(e[0], valor_formatado))
+
+                except Exception:
+                    print('Erro na tabela de ticker e valor total investido')
+        self.bd_disconnect()
+
     def on_double_click(self, event):
         self.clean_stocks_entries()
         self.amount_entry.delete(0, END)
@@ -146,8 +231,7 @@ class Functions:
             col1, col2 = self.ticker_amount_table.item(selected_stock[0], 'values')
             self.old_ticker = col1
 
-            try: 
-                print('Verificar se é uma ação estrangeira.')
+            try:
                 acao = yf.Ticker(f'{self.old_ticker}')
                 informations2 = acao.history(period='1d')
 
@@ -157,8 +241,7 @@ class Functions:
                     self.five_days_button.config(bg='#92000a')
                     self.five_days()
                     self.create_div_graph()
-                else: 
-                    print('Ação não estrangeira')
+                else:
                     acao = yf.Ticker(f'{self.old_ticker}.SA')
                     informations2 = acao.history(period='1d')
 
@@ -410,7 +493,6 @@ class Functions:
             ax2.set_facecolor('#880808')
             ax2.grid(True, linestyle='-', alpha=0.5)
 
-            print(self.language)
             if self.language == 'pt':
                 text = 'SELECIONE OU REGISTRE \n           UMA AÇÃO'
                 ax2.text(0.155, 0.4, text, alpha=0.5, fontsize=25, color='white')
@@ -445,9 +527,6 @@ class Functions:
             amounts = [record[0] for record in self.cursor.fetchall()]
             self.bd_disconnect()
 
-            print(tickers)
-            print(amounts)
-
             stock_list = tickers #ações
             amount_list = amounts #quantidade
             prices_list = []
@@ -469,21 +548,16 @@ class Functions:
                             price = info['Close'].values[-1]
                             price = round(price, 2)
                             prices_list.append(price)
-                        else:
-                            print('Erro ao procurar o preço das ações.')
 
                 except Exception:
                     print('Erro no gráfico de pedaço')
-
-            print(prices_list)
 
             price_amount_list = []
 
             for p, a in zip(prices_list, amount_list):
                 price_amount_list.append(p * a)   
 
-            text = '\n'.join(stock_list)
-            self.ticker_price.config(text=text, fg='white', font=('garamond', 13, 'bold'))          
+            text = '\n'.join(stock_list)        
 
             n = len(stock_list)
             explode = tuple(0.015 * n for _ in range(n))
@@ -495,7 +569,7 @@ class Functions:
 
             canvas = FigureCanvasTkAgg(fig3, master=self.pie_graph)
             canvas_widget = canvas.get_tk_widget()
-            canvas_widget.place(rely=0, relx=0.3, relheight=1, relwidth=0.7)
+            canvas_widget.place(rely=0, relx=0.5, relheight=1, relwidth=0.5)
             canvas.draw()
 
             plt.close(fig3)
@@ -513,6 +587,7 @@ class Functions:
             self.bd_disconnect()
             self.clean_stocks_entries()
             self.show_table1()
+            self.show_table2()
             self.create_pie_graph()
             self.old_ticker = None
             self.create_div_graph()
@@ -539,6 +614,7 @@ class Functions:
         self.bd_disconnect()
 
         self.show_table1()
+        self.show_table2()
         self.create_pie_graph()
 
     def images_64(self):
@@ -576,6 +652,11 @@ class Functions:
         self.ticker_amount_table.heading('#1', text='Ticker')
         self.ticker_amount_table.heading('#2', text='Quantidade')
 
+        self.ticker_value_table.heading('#1', text='Ticker')
+        self.ticker_value_table.heading('#2', text='Valor Total Investido')
+
+        self.show_table2()
+
     def usa_language(self):
         self.language = 'en'
 
@@ -596,6 +677,9 @@ class Functions:
 
         self.ticker_amount_table.heading('#1', text='Symbol')
         self.ticker_amount_table.heading('#2', text='Aumont')
+        
+        self.ticker_value_table.heading('#1', text='Symbol')
+        self.ticker_value_table.heading('#2', text='Total Amount Invested')
 
         self.new_button.config(text='Add')
         self.clean_button.config(text='Clean')
@@ -604,6 +688,8 @@ class Functions:
         self.five_days_button.config(text='5 DAYS')
         self.thirty_days_button.config(text='30 DAYS')
         self.year_button.config(text='1 YEAR')
+
+        self.show_table2()
 
     def china_language(self):
         self.language = 'ch'
@@ -626,6 +712,9 @@ class Functions:
         self.ticker_amount_table.heading('#1', text='象徵')
         self.ticker_amount_table.heading('#2', text='數量')
 
+        self.ticker_value_table.heading('#1', text='象徵')
+        self.ticker_value_table.heading('#2', text='投資總額')
+
         self.new_button.config(text='加上')
         self.clean_button.config(text='清潔')
         self.delete_button.config(text='刪除')
@@ -633,6 +722,8 @@ class Functions:
         self.five_days_button.config(text='5天')
         self.thirty_days_button.config(text='30天')
         self.year_button.config(text='1年')
+        
+        self.show_table2()
 
 class Aplication(Functions):
     def __init__(self):
@@ -647,11 +738,13 @@ class Aplication(Functions):
         self.texts()
         self.entries()
         self.ticker_aumont_table()
-        self.create_table()
+        self.ticker_value_table()
         self.show_table1()
+        self.show_table2()
+        self.create_pie_graph()
+        self.create_table()
         self.create_graph()
         self.create_div_graph()
-        self.create_pie_graph()
         window.mainloop()
 
         self.selected_button = None
@@ -702,7 +795,7 @@ class Aplication(Functions):
         self.separation_line2.place(relx=0.05, rely=0.005, relwidth=0.0008, relheight=0.04)
 
         self.pie_graph = Frame(self.window, highlightbackground='black', highlightthickness=4, bg='#880808')
-        self.pie_graph.place(relx=0.17, rely=0.575, relwidth=0.35, relheight=0.4)
+        self.pie_graph.place(relx=0.12, rely=0.575, relwidth=0.4, relheight=0.4)
 
     def buttons(self):
         self.new_button = Button(self.window, text='Adicionar', bg='#800020', fg='white', bd=3, font=('garamond', 11, 'bold'), command=self.register_stock,     activebackground='#92000a',activeforeground='white')
@@ -764,9 +857,6 @@ class Aplication(Functions):
         self.amount_text = Label(self.window, text='Quantidade', bg='#880808', fg='white', font=('garamond', 13, 'bold'))
         self.amount_text.place(relx=0.018, rely=0.375, relwidth=0.05, relheight=0.025)
 
-        self.ticker_price = Label(self.pie_graph, bg='blue')
-        self.ticker_price.place(relx=0, rely=0, relwidth=0.3, relheight=1)
-
         self.me = Label(self.window, text='@matheushio7', bg='#880808', fg='black', font=('garamond', 10, 'bold'))
         self.me.place(relx=0, rely=0.977, relwidth=0.05, relheight=0.025)
 
@@ -777,7 +867,7 @@ class Aplication(Functions):
         self.amount_entry = Spinbox(self.window, from_=0, to=100000000000000, font=('garamond', 13))
         self.amount_entry.place(relx=0.02, rely=0.4, relwidth=0.05, relheight=0.025)
 
-    def ticker_aumont_table(self, language='pt'):
+    def ticker_aumont_table(self):
         self.ticker_amount_table = ttk.Treeview(self.frame_tabela_ticker_amount, height=3, columns=('column1', 'column2'))
         self.ticker_amount_table.configure(height=5, show='headings')
         self.ticker_amount_table.heading('#1', text='Ticker')
@@ -796,5 +886,25 @@ class Aplication(Functions):
         self.scrool_ticker_amount_table.place(relx=0.94, rely=0.001, relwidth=0.06, relheight=0.9999)
 
         self.ticker_amount_table.bind('<Double-1>', self.on_double_click)
+
+    def ticker_value_table(self):
+        self.ticker_value_table = ttk.Treeview(self.pie_graph, height=3, columns=('column1', 'column2'))
+        self.ticker_value_table.configure(height=5, show='headings')
+        self.ticker_value_table.heading('#1', text='Ticker')
+        self.ticker_value_table.heading('#2', text='Valor Total Investido')
+
+        self.ticker_value_table.column('#1', width=1)
+        self.ticker_value_table.column('#2', width=50)
+        self.ticker_value_table.place(relx=0, rely=0, relwidth=0.42, relheight=1)
+
+        style2 = ttk.Style()
+        style2.theme_use('clam')
+        style2.configure('Treeview', font=('garamond', 12), rowheight=30)
+        style2.configure("Treeview.Heading", font=("garamond", 12, "bold"))
+        style2.map('Treeview', background=[('selected', '#880808')])
+        
+        self.scrool_ticker_value_table = Scrollbar(self.pie_graph, orient='vertical', command=self.ticker_value_table.yview)
+        self.ticker_value_table.configure(yscroll=self.scrool_ticker_value_table.set)
+        self.scrool_ticker_value_table.place(relx=0.42, rely=0.001, relwidth=0.03, relheight=0.9999)
 
 Aplication()
