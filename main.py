@@ -802,6 +802,7 @@ class Aplication(Functions):
     def screen_settings(self):
         self.window.title('Stocks Tracker')
         self.window.configure(background='#880808')  # cor de fundo
+        self.window.iconbitmap('lírio_icon.ico')
         self.window.geometry('1920x1080')  # dimensões da tela
         self.window.state('zoomed')
         self.window.resizable(True, True)  # possibilidade de redimensionar a tela
