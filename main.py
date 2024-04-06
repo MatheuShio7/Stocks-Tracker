@@ -801,11 +801,16 @@ class Aplication(Functions):
 
     def screen_settings(self):
         self.window.title('Stocks Tracker')
-        self.window.configure(background='#880808')  # cor de fundo
-        self.window.iconbitmap('lírio_icon.ico')
-        self.window.geometry('1920x1080')  # dimensões da tela
+
+        # bakcground color
+        self.window.configure(background='#880808')  
+
+        # screen dimensions
+        self.window.geometry('1920x1080')  
         self.window.state('zoomed')
-        self.window.resizable(True, True)  # possibilidade de redimensionar a tela
+
+        # possibility of resizing the screen 
+        self.window.resizable(True, True)  
 
     def images(self):
         self.spider_img = ImageTk.PhotoImage(data=base64.b64decode(self.spider64))
