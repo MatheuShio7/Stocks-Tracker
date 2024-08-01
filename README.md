@@ -1,4 +1,4 @@
-<h1 align="center">
+<h1 style="text-align: center;">
     <p> Stocks Tracker 📊</p>
 </h1>
 
@@ -6,7 +6,7 @@
 
 ## About 🛈
 
-**Stock Tracker** is a platform for monitoring your stock portfolio. Enabling the register of stocks and obtaining important data in graphic format.
+**Stock Tracker** is a platform for monitoring your assets portfolio. Enabling the register and obtaining important data such as price history and the last 12 earnings of that asset in graphic format. Software available in English, Chinese and Portuguese. All data obtained through [Yahoo Finance](https://finance.yahoo.com/).
 
 ## Tools 🧰
 
@@ -15,8 +15,7 @@
     - Matplotlib
     - Yfinance
 - **SQLite**
-- **Web Scrapping**
-    - BeautifulSoup
+- **Yahoo Finance API**
 
 ## Download ✅
 
